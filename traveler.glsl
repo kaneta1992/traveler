@@ -32,9 +32,11 @@ mat3 rotateMat(float roll, float pitch, float yaw)
                 -sp, sr * cp, cr * cp);
 }
 
-float lerpStep(float t, float a, float b)
+float stepUp(float t, float len, float smo)
 {
-    return floor(t/b) + mix(0.0, 1.0, clamp(mod(t, b)/a, 0.0, 1.0));
+  float tt = mod(t += smo, len);
+  float stp = floor(t / len) - 1.0;
+  return smoothstep(0.0, smo, tt) + stp;
 }
 
 float pingPong(float t, float len, float smo)
@@ -142,7 +144,7 @@ Surface map(vec3 p)
     mat3 rot = rotateMat(0.1-pinpon,-pinpon, 0.4-pinpon);
     
     //snare
-    float snare = beat < 32.0 ? 0.0 : lerpStep(beat - 32.0 - 1.0, 0.5, 2.0);
+    float snare = beat < 32.0 ? 0.0 : stepUp(beat - 32.5, 2.0, 0.5);
     vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
     if (beat > 63.5) {
         angle = mix(angle, vec3(0.0), (beat - 63.5) * 2.0);
@@ -257,7 +259,6 @@ vec3 light(Surface surface, vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos
     diffuse *= sha;
     spec *= sha;
     return vec3(diffuse + spec) / (llen * llen) + emission * (sin(time) * 0.5 + 0.5 + 0.2);
-    //return vec3(sha);
 }
 
 
