@@ -289,17 +289,6 @@ vec3 getColor(vec2 p, float time)
     }
 }
 
-vec3 aaGetColor(vec2 p, float time) {
-    vec3 col = vec3(0.0);
-    const int num = 4;
-    
-    for (int i = 0; i < num; i++) {
-        float fi = float(i + 1);
-    	col += getColor(p + vec2(step(fi, 2.001), mod(fi, 2.001)) * 0.0015, time - float(i) * 0.01);
-    }
-    return col / float(num);
-}
-
 vec2 hash( vec2 p ){
 	p = vec2( dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));
 	return fract(sin(p)*43758.5453) * 2.0 - 1.0;
