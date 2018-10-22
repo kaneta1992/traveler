@@ -4,6 +4,8 @@ const int Iterations = 3;
 
 float time;
 float beat;
+vec3 ray;
+vec3 ro, ta, sp;
 
 struct Surface {
     float dist;
@@ -35,12 +37,10 @@ float lerpStep(float t, float a, float b)
     return floor(t/b) + mix(0.0, 1.0, clamp(mod(t, b)/a, 0.0, 1.0));
 }
 
-float pingPong(float t, float len, float smth)
+float pingPong(float t, float len, float smo)
 {
-    float tt = mod(t, len);
-    tt = min(1.0, tt * smth);
-    float cond = step(mod(t, len*2.0), len);
-    return mix(1.0 - tt, tt, cond);
+  t = mod(t + smo, len * 2.);
+  return 1.0 - (smoothstep(0., smo, t) - smoothstep(len, len + smo, t));
 }
 
 float sphere( vec3 p, float s )
@@ -63,9 +63,9 @@ float de(vec3 p, mat3 rot, float scale, out vec3 e) {
 		p*=rot;
 		p = abs(p);
 
-		if (p.x < p.y) {p.yx = mix(p.yx, p.xy, pingPong(beat, 63.5 * 0.5, 1.0));}
-		if (p.x < p.z) {p.xz = mix(p.xz, p.zx, pingPong(beat, 63.5, 1.0));}
-		if (p.y < p.z) {p.yz = mix(p.yz, p.zy, pingPong(beat, 63.5 * 0.25, 1.0));}
+		if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(beat, 63.5 * 0.5, 1.0));}
+		if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(beat, 63.5, 1.0));}
+		if (p.y < p.z) {p.yz = mix(p.zy, p.yz, pingPong(beat, 63.5 * 0.25, 1.0));}
 
 		p.z -= 0.5*offset.z*(scale-1.)/scale;
 		p.z = -abs(-p.z);
@@ -129,19 +129,16 @@ void intersectSphere(inout Surface surface, vec3 p)
     }
 }
 
-vec3 ro, ta, sp;
-
 Surface map(vec3 p)
 {
     vec3 pp = mod(p, 1.5) - 0.75;
-    
     
     //kick
     float kick = mod(beat,1.);
     float scale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
     
     // hihat
-    float pinpon = beat < 16.0 ? 0.0 : pingPong(beat + 0.5, 1.0, 10.0) * 0.1;
+    float pinpon = beat < 16.0 ? 0.0 : pingPong(beat + 0.5, 1.0, 0.1) * 0.1;
     mat3 rot = rotateMat(0.1-pinpon,-pinpon, 0.4-pinpon);
     
     //snare
@@ -263,7 +260,6 @@ vec3 light(Surface surface, vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos
     //return vec3(sha);
 }
 
-vec3 ray;
 
 vec3 getColor(vec2 p)
 {
@@ -340,10 +336,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     time = iTime;
     beat = time * 120.0 / 60.0;
     beat = mod(beat, 64.0);
-
     vec3 col =  getColor(p);
     vec2 pp = fragCoord/iResolution.xy;
     col *= 0.5 + 0.5*pow( 16.0*pp.x*pp.y*(1.0-pp.x)*(1.0-pp.y), 0.05 );
     col = postProcess(p, col);
-	fragColor = vec4(pow(col, vec3(1.0 / 2.2)), 1.0);
+    fragColor = vec4(pow(col, vec3(1.0 / 2.2)), 1.0);
 }
