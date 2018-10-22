@@ -2,6 +2,9 @@
 #define PI 3.141592654
 const int Iterations = 3;
 
+float time;
+float beat;
+
 struct Surface {
     float dist;
     float depth;
@@ -55,7 +58,6 @@ float de(vec3 p, mat3 rot, float scale, out vec3 e) {
 	vec3 offset = vec3(1,1,1);
 
     p*=transpose(rot);
-    float beat = iTime * 120.0 / 60.0;
 	for (int i=0; i<Iterations; i++) {
         
 		p*=rot;
@@ -129,12 +131,10 @@ void intersectSphere(inout Surface surface, vec3 p)
 
 vec3 ro, ta, sp;
 
-Surface map(vec3 p, float time)
+Surface map(vec3 p)
 {
     vec3 pp = mod(p, 1.5) - 0.75;
     
-    float beat = time * 120.0 / 60.0;
-    beat = mod(beat, 64.0);
     
     //kick
     float kick = mod(beat,1.);
@@ -163,12 +163,12 @@ Surface map(vec3 p, float time)
     return surface;
 }
 
-Surface intersect(vec3 ro, vec3 ray, float time)
+Surface intersect(vec3 ro, vec3 ray)
 {
     float t = 0.0;
     Surface res;
     for (int i = 0; i < 128; i++) {
-        res = map(ro+ray*t, time);
+        res = map(ro+ray*t);
         if( res.dist < 0.001 ) {
             res.depth = t;
             return res;
@@ -179,14 +179,14 @@ Surface intersect(vec3 ro, vec3 ray, float time)
     return res;
 }
 
-vec3 normal(vec3 pos, float e ,float time)
+vec3 normal(vec3 pos, float e)
 {
     vec3 eps = vec3(e,0.0,0.0);
 
 	return normalize( vec3(
-           map(pos+eps.xyy, time).dist - map(pos-eps.xyy, time).dist,
-           map(pos+eps.yxy, time).dist - map(pos-eps.yxy, time).dist,
-           map(pos+eps.yyx, time).dist - map(pos-eps.yyx, time).dist ) );
+           map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
+           map(pos+eps.yxy).dist - map(pos-eps.yxy).dist,
+           map(pos+eps.yyx).dist - map(pos-eps.yyx).dist ) );
 }
 
 mat3 createCamera(vec3 ro, vec3 ta, float cr )
@@ -198,13 +198,13 @@ mat3 createCamera(vec3 ro, vec3 ta, float cr )
     return mat3( cu, cv, cw );
 }
 
-float softshadow( in vec3 ro, in vec3 rd, in float mint, in float maxt, in float k, float time)
+float softshadow( in vec3 ro, in vec3 rd, in float mint, in float maxt, in float k)
 {
     float res = 1.0;
     float t = mint;
     for( int i=0; i<16; i++ )
     {
-        float h = map( ro + rd*t, time).dist;
+        float h = map( ro + rd*t).dist;
         res = min( res, k*h/t );
         t += clamp( h, 0.05, 0.2 );
         if( res<0.001 || t>maxt ) break;
@@ -239,12 +239,12 @@ vec3 tex(vec2 p, float z)
     return vec3(pow(f, 16.0) + step(0.935, f));
 }
 
-vec3 light(Surface surface, vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, float time)
+vec3 light(Surface surface, vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos)
 {
     vec3 lvec = normalize(lpos - pos);
     vec3 hvec = normalize(lvec - ray);
     float llen = length(lpos - pos);
-    float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0, time) + 0.25) / 1.25;
+    float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
     vec3 diffuse = surface.diffuse * col  * (1.0 / PI);
     
     float rough = surface.roughness;
@@ -265,7 +265,7 @@ vec3 light(Surface surface, vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos
 
 vec3 ray;
 
-vec3 getColor(vec2 p, float time)
+vec3 getColor(vec2 p)
 {
     // camera
 	ro = (vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5));
@@ -275,14 +275,14 @@ vec3 getColor(vec2 p, float time)
     ray = cm * normalize(vec3(p, 1.0));
     
     // marching loop
-    Surface res = intersect(ro, ray, time);
+    Surface res = intersect(ro, ray);
     
     // hit check
     if(res.dist > -0.5) {
         vec3 pos = ro + ray * res.depth;
-        vec3 nor = normal(pos, 0.0025, time);
-        vec3 col = light(res, pos, nor, ray, vec3(0.01), ro, time);
-        col += light(res, pos, nor, ray, vec3(0.2, 0.4, 0.8), ro + vec3(0.0, 0.0, 2.0), time);
+        vec3 nor = normal(pos, 0.0025);
+        vec3 col = light(res, pos, nor, ray, vec3(0.01), ro);
+        col += light(res, pos, nor, ray, vec3(0.2, 0.4, 0.8), ro + vec3(0.0, 0.0, 2.0));
         return col + vec3(0.01, 0.02, 0.04) * res.depth;
     }else{
         return vec3(1.0);
@@ -312,7 +312,7 @@ vec3 dirt(vec2 uv, float n)
     return vec3(c) * exp(rnd.x * 4.0);
 }
 
-vec3 postProcess(vec2 uv, vec3 col, float time)
+vec3 postProcess(vec2 uv, vec3 col)
 {   
     uv *= 0.5;
     
@@ -337,10 +337,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // fragment position
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
 
-    float t = iTime;
-    vec3 col =  getColor(p, t);
+    time = iTime;
+    beat = time * 120.0 / 60.0;
+    beat = mod(beat, 64.0);
+
+    vec3 col =  getColor(p);
     vec2 pp = fragCoord/iResolution.xy;
     col *= 0.5 + 0.5*pow( 16.0*pp.x*pp.y*(1.0-pp.x)*(1.0-pp.y), 0.05 );
-    col = postProcess(p, col, t);
+    col = postProcess(p, col);
 	fragColor = vec4(pow(col, vec3(1.0 / 2.2)), 1.0);
 }
