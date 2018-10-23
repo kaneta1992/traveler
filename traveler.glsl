@@ -207,15 +207,15 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 pattern = 19.3602379925 * spLocalNormal;
         float emission = min(1.0,  tex(pattern.zy, 113.09).x + tex(pattern.xz, 113.09).y + tex(pattern.xy, 113.09).z);
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 10.);
-        col += vec3(1.0, 0.25, 0.35) * emission * (sin(time) * 0.5 + 0.5 + 0.2);
+        col += vec3(1.0, 0.25, 0.35) * 2. * emission * (sin(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_BODY) {
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 5.);
-        col += vec3(1.0, 0.25, 0.35) * (sin(time) * 0.5 + 0.5 + 0.2);
+        col += vec3(1.0, 0.25, 0.35) * 2. * (sin(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_STAGE) {
         col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.);
     }
 
-    return col + vec3(0.01, 0.02, 0.04) * depth;
+    return mix(col, vec3(0.1, 0.2, 0.4) * 80.0, pow(depth * 0.01, 1.6));
 }
 
 vec3 trace(vec3 ro, vec3 ray)
