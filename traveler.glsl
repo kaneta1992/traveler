@@ -9,7 +9,9 @@
 const int Iterations = 3;
 
 float time;
-float beat;
+float beat, kick, hihat, snare;
+float stageScale;
+mat3 stageRot, stageRot2;
 vec3 ray;
 vec3 ro, ta, sp;
 
@@ -159,20 +161,39 @@ void intersectSphere(inout Surface surface, vec3 p)
     }
 }
 
+vec2 distAll(vec3 p)
+{
+    vec3 pp = mod(p, 1.5) - 0.75;
+    vec2 st1 = distStage(pp, stageRot, stageScale);
+    vec2 st2 = distStage(pp, stageRot2 * stageRot, stageScale);
+    vec2 sp = distSphere(p);
+    return U(sp, U(st1, st2));
+}
+
+vec3 trace(vec3 ro, vec3 ray)
+{
+    float t = 0.0;
+    vec2 res;
+    for (int i = 0; i < 128; i++) {
+        vec3 p = ro+ray*t;
+        res = distAll(p);
+        if( res.x < 0.001 ) {
+            break;
+        }
+        t += res.x;
+    }
+    return vec3(0.0);
+}
+
 Surface map(vec3 p)
 {
     vec3 pp = mod(p, 1.5) - 0.75;
     
     //kick
-    float kick = mod(beat,1.);
     float scale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
-    
     // hihat
-    float pinpon = beat < 16.0 ? 0.0 : pingPong(beat + 0.5, 1.0, 0.1) * 0.1;
-    mat3 rot = rotateMat(0.1-pinpon,-pinpon, 0.4-pinpon);
-    
+    mat3 rot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
     //snare
-    float snare = beat < 32.0 ? 0.0 : stepUp(beat - 32.5, 2.0, 0.5);
     vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
     if (beat > 63.5) {
         angle = mix(angle, vec3(0.0), (beat - 63.5) * 2.0);
@@ -365,6 +386,19 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     time = iTime;
     beat = time * 120.0 / 60.0;
     beat = mod(beat, 64.0);
+
+    kick = mod(beat,1.);
+    hihat = beat < 16.0 ? 0.0 : pingPong(beat + 0.5, 1.0, 0.1) * 0.1;
+    snare = beat < 32.0 ? 0.0 : stepUp(beat - 32.5, 2.0, 0.5);
+
+    stageScale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
+    stageRot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
+    vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
+    if (beat > 63.5) {
+        angle = mix(angle, vec3(0.0), (beat - 63.5) * 2.0);
+    }
+    stageRot2 = rotateMat(angle.x, angle.y, angle.z);
+
     vec3 col =  getColor(p);
     vec2 pp = fragCoord/iResolution.xy;
     col *= 0.5 + 0.5*pow( 16.0*pp.x*pp.y*(1.0-pp.x)*(1.0-pp.y), 0.05 );
