@@ -289,10 +289,10 @@ vec3 light2(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, 
     return vec3(diff + spec) / (llen * llen);
 }
 
-vec3 Shade(vec3 pos, vec3 normal, vec3 ray)
+vec3 Shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float roughness)
 {
-    vec3 col = light2(pos, normal, ray, vec3(0.01), ro, vec3(1.), vec3(0.), 10.);
-    col += light2(pos, normal, ray, vec3(0.2, 0.4, 0.8), ro + vec3(0.0, 0.0, 2.0), vec3(1.), vec3(0.), 10.);
+    vec3 col = light2(pos, normal, ray, vec3(0.01), ro, diffuse, specular, roughness);
+    col += light2(pos, normal, ray, vec3(0.2, 0.4, 0.8), ro + vec3(0.0, 0.0, 2.0), diffuse, specular, roughness);
     return col;
 }
 
@@ -303,11 +303,16 @@ vec3 Materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
     vec3 col = vec3(0.);
 
     if (mat.y == MAT_WING) {
-        col += Shade(pos, nor, ray);
+        vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
+        vec3 pattern = 19.3602379925 * spLocalNormal;
+        float emission = min(1.0,  tex(pattern.zy, 113.09).x + tex(pattern.xz, 113.09).y + tex(pattern.xy, 113.09).z);
+        col += Shade(pos, nor, ray, vec3(.25), vec3(.15), 10.);
+        col += vec3(1.0, 0.25, 0.35) * emission * (sin(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_BODY) {
-        col += Shade(pos, nor, ray);
+        col += Shade(pos, nor, ray, vec3(.25), vec3(.15), 5.);
+        col += vec3(1.0, 0.25, 0.35) * (sin(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_STAGE) {
-        col += Shade(pos, nor, ray);
+        col += Shade(pos, nor, ray, vec3(1.), vec3(1.), 25.);
     }
 
     return col + vec3(0.01, 0.02, 0.04) * depth;
