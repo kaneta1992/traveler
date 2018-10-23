@@ -1,5 +1,10 @@
 #define TAU 6.283185307
 #define PI 3.141592654
+#define U(z,w) (z.x < w.x ? z : w)
+
+#define MAT_WING 1.0
+#define MAT_BODY 2.0
+
 const int Iterations = 3;
 
 float time;
@@ -96,6 +101,23 @@ void intersectStage(inout Surface surface, vec3 p, mat3 rot, float scale)
         surface.emission = vec4(e, 1.0);
         surface.pattern = vec3(0.0);
     }
+}
+
+vec2 distSphere(vec3 p)
+{
+    float wing = sphere(p, 0.1);
+    float b1 = sdBox(p, vec3(10.0, 0.02, 10.0));
+    float b2 = sdBox(p, vec3(0.02, 10.0, 10.0));
+    float b3 = sdBox(p, vec3(10.0, 10.0, 0.02));
+    float s = sphere(p, 0.098);
+    wing = max(-b1, wing);
+    wing = max(-b2, wing);
+    wing = max(-b3, wing);
+    wing = max(-s, wing);
+
+    vec2 w = vec2(wing, MAT_WING);
+    vec2 body = vec2(sphere(p, 0.08), MAT_BODY);
+    return U(w, body);
 }
 
 void intersectSphere(inout Surface surface, vec3 p)
