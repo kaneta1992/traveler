@@ -8,6 +8,7 @@
 
 const int Iterations = 3;
 
+// TODO: グローバル変数が多すぎると拡張しずらいのでできれば考える
 float time;
 float beat, kick, hihat, snare;
 float stageScale;
@@ -62,6 +63,7 @@ float de(vec3 p, mat3 rot, float scale) {
 		p*=rot;
 		p = abs(p);
 
+        // TODO: pingPongを変更する前と挙動が違うので後で見る
 		if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(beat, 63.5 * 0.5, 1.0));}
 		if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(beat, 63.5, 1.0));}
 		if (p.y < p.z) {p.yz = mix(p.zy, p.yz, pingPong(beat, 63.5 * 0.25, 1.0));}
@@ -157,7 +159,7 @@ float sdRect( vec2 p, vec2 b )
   return min(max(d.x, d.y),0.0) + length(max(d,0.0));
 }
 
-vec3 tex(vec2 p, float z)
+float tex(vec2 p, float z)
 {
     vec2 q = (fract(p / 10.0) - 0.5) * 10.0;
     float d = 9999.0;
@@ -170,7 +172,7 @@ vec3 tex(vec2 p, float z)
         d = min(d, k);
     }
     float f = 1.0 / (1.0 + abs(d));
-    return vec3(pow(f, 16.0) + step(0.935, f));
+    return pow(f, 16.0) + step(0.935, f);
 }
 
 vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, vec3 specular, float roughness)
@@ -205,7 +207,7 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
     if (mat.y == MAT_WING) {
         vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
         vec3 pattern = 19.3602379925 * spLocalNormal;
-        float emission = min(1.0,  tex(pattern.zy, 113.09).x + tex(pattern.xz, 113.09).y + tex(pattern.xy, 113.09).z);
+        float emission = min(1.0,  tex(pattern.zy, 113.09) + tex(pattern.xz, 113.09) + tex(pattern.xy, 113.09));
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 10.);
         col += vec3(1.0, 0.25, 0.35) * 2. * emission * (sin(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_BODY) {
