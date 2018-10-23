@@ -11,7 +11,7 @@ const int Iterations = 3;
 float time;
 float beat, kick, hihat, snare;
 float stageScale;
-mat3 stageRot, stageRot2;
+mat3 sphereRot, stageRot, stageRot2;
 vec3 ray;
 vec3 ro, ta, sp;
 
@@ -166,24 +166,10 @@ vec2 distAll(vec3 p)
     vec3 pp = mod(p, 1.5) - 0.75;
     vec2 st1 = distStage(pp, stageRot, stageScale);
     vec2 st2 = distStage(pp, stageRot2 * stageRot, stageScale);
-    vec2 sp = distSphere(p);
+    vec2 sp = distSphere((p - sp) * sphereRot);
     return U(sp, U(st1, st2));
 }
 
-vec3 trace(vec3 ro, vec3 ray)
-{
-    float t = 0.0;
-    vec2 res;
-    for (int i = 0; i < 128; i++) {
-        vec3 p = ro+ray*t;
-        res = distAll(p);
-        if( res.x < 0.001 ) {
-            break;
-        }
-        t += res.x;
-    }
-    return vec3(0.0);
-}
 
 Surface map(vec3 p)
 {
@@ -287,6 +273,61 @@ vec3 tex(vec2 p, float z)
     return vec3(pow(f, 16.0) + step(0.935, f));
 }
 
+vec3 light2(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, vec3 specular, float roughness)
+{
+    vec3 lvec = normalize(lpos - pos);
+    vec3 hvec = normalize(lvec - ray);
+    float llen = length(lpos - pos);
+    float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
+    vec3 diff = diffuse * col  * (1.0 / PI);
+
+    float bpnorm = ( roughness + 2.0 ) / ( 2.0 * PI );
+    vec3 spec = specular * col * bpnorm * pow( max( 0.0, dot( normal, hvec ) ), roughness );
+
+    diff *= sha;
+    spec *= sha;
+    return vec3(diff + spec) / (llen * llen);
+}
+
+vec3 Shade(vec3 pos, vec3 normal, vec3 ray)
+{
+    vec3 col = light2(pos, normal, ray, vec3(0.01), ro, vec3(1.), vec3(0.), 10.);
+    col += light2(pos, normal, ray, vec3(0.2, 0.4, 0.8), ro + vec3(0.0, 0.0, 2.0), vec3(1.), vec3(0.), 10.);
+    return col;
+}
+
+vec3 Materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
+{
+    vec3 pos = ro + ray * depth;
+    vec3 nor = normal(pos, 0.0025);
+    vec3 col = vec3(0.);
+
+    if (mat.y == MAT_WING) {
+        col += Shade(pos, nor, ray);
+    } else if (mat.y == MAT_BODY) {
+        col += Shade(pos, nor, ray);
+    } else if (mat.y == MAT_STAGE) {
+        col += Shade(pos, nor, ray);
+    }
+
+    return col + vec3(0.01, 0.02, 0.04) * depth;
+}
+
+vec3 trace(vec3 ro, vec3 ray)
+{
+    float t = 0.0;
+    vec2 res;
+    for (int i = 0; i < 128; i++) {
+        vec3 p = ro+ray*t;
+        res = distAll(p);
+        if( res.x < 0.001 ) {
+            break;
+        }
+        t += res.x;
+    }
+    return Materialize(ro, ray, t, res);
+}
+
 vec3 light(Surface surface, vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos)
 {
     vec3 lvec = normalize(lpos - pos);
@@ -310,7 +351,6 @@ vec3 light(Surface surface, vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos
     return vec3(diffuse + spec) / (llen * llen) + emission * (sin(time) * 0.5 + 0.5 + 0.2);
 }
 
-
 vec3 getColor(vec2 p)
 {
     // camera
@@ -322,6 +362,9 @@ vec3 getColor(vec2 p)
     
     // marching loop
     Surface res = intersect(ro, ray);
+
+    vec3 c = trace(ro, ray);
+    return c;
     
     // hit check
     if(res.dist > -0.5) {
@@ -398,6 +441,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         angle = mix(angle, vec3(0.0), (beat - 63.5) * 2.0);
     }
     stageRot2 = rotateMat(angle.x, angle.y, angle.z);
+    sphereRot = rotateMat(sin(time),cos(time), sin(time * .33));
 
     vec3 col =  getColor(p);
     vec2 pp = fragCoord/iResolution.xy;
