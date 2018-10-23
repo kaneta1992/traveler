@@ -15,17 +15,6 @@ mat3 sphereRot, stageRot, stageRot2;
 vec3 ray;
 vec3 ro, ta, sp;
 
-struct Surface {
-    float dist;
-    float depth;
-
-    vec3 diffuse;
-    vec3 specular;
-    vec4 emission;
-    float roughness;
-    vec3 pattern;
-};
-
 mat3 rotateMat(float roll, float pitch, float yaw)
 {
     float cp = cos(pitch);
@@ -98,19 +87,6 @@ vec2 distStage(vec3 p, mat3 rot, float scale)
     return vec2(d, MAT_STAGE);
 }
 
-void intersectStage(inout Surface surface, vec3 p, mat3 rot, float scale)
-{
-    float d = de(p, rot, scale);
-    if (d < surface.dist) {
-        surface.dist = d;
-        surface.diffuse = vec3(1.);
-        surface.specular = vec3(1.);
-        surface.roughness = 25.0;
-        surface.emission = vec4(0.0, 0.0, 0.0, 1.0);
-        surface.pattern = vec3(0.0);
-    }
-}
-
 vec2 distSphere(vec3 p)
 {
     float wing = sphere(p, 0.1);
@@ -128,39 +104,6 @@ vec2 distSphere(vec3 p)
     return U(w, body);
 }
 
-void intersectSphere(inout Surface surface, vec3 p)
-{
-    float d = sphere(p, 0.1);
-    float b1 = sdBox(p, vec3(10.0, 0.02, 10.0));
-    float b2 = sdBox(p, vec3(0.02, 10.0, 10.0));
-    float b3 = sdBox(p, vec3(10.0, 10.0, 0.02));
-    float s = sphere(p, 0.098);
-    d = max(-b1, d);
-    d = max(-b2, d);
-    d = max(-b3, d);
-    d = max(-s, d);
-    
-    
-    if (d < surface.dist) {
-        surface.dist = d;
-        surface.diffuse = vec3(0.25);
-        surface.specular = vec3(0.15);
-        surface.roughness = 10.0;
-        surface.emission = vec4(1.0, 0.25, 0.35, 1.0);
-        surface.pattern = normalize(p);
-    }
-    
-    float dd = sphere(p, 0.08);
-    if (dd < d) {
-        surface.dist = dd;
-        surface.diffuse = vec3(0.25);
-        surface.specular = vec3(0.15);
-        surface.roughness = 5.0;
-        surface.emission = vec4(1.0, 0.25, 0.35, 1.0);
-        surface.pattern = vec3(0.0);
-    }
-}
-
 vec2 distAll(vec3 p)
 {
     vec3 pp = mod(p, 1.5) - 0.75;
@@ -170,57 +113,14 @@ vec2 distAll(vec3 p)
     return U(sp, U(st1, st2));
 }
 
-
-Surface map(vec3 p)
-{
-    vec3 pp = mod(p, 1.5) - 0.75;
-    
-    //kick
-    float scale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
-    // hihat
-    mat3 rot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
-    //snare
-    vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
-    if (beat > 63.5) {
-        angle = mix(angle, vec3(0.0), (beat - 63.5) * 2.0);
-    }
-    
-    Surface surface;
-    surface.dist = 99999.9;
-    
-    intersectStage(surface, pp, rot, scale);
-    intersectStage(surface, pp, rotateMat(angle.x, angle.y, angle.z) * rot, scale);
-    
-    rot = rotateMat(sin(time),cos(time), sin(time * .33));
-    intersectSphere(surface, (p - sp) * rot);
-
-    return surface;
-}
-
-Surface intersect(vec3 ro, vec3 ray)
-{
-    float t = 0.0;
-    Surface res;
-    for (int i = 0; i < 128; i++) {
-        res = map(ro+ray*t);
-        if( res.dist < 0.001 ) {
-            res.depth = t;
-            return res;
-        }
-        t += res.dist;
-    }
-	res.dist = -1.0;
-    return res;
-}
-
 vec3 normal(vec3 pos, float e)
 {
     vec3 eps = vec3(e,0.0,0.0);
 
 	return normalize( vec3(
-           map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
-           map(pos+eps.yxy).dist - map(pos-eps.yxy).dist,
-           map(pos+eps.yyx).dist - map(pos-eps.yyx).dist ) );
+           distAll(pos+eps.xyy).x - distAll(pos-eps.xyy).x,
+           distAll(pos+eps.yxy).x - distAll(pos-eps.yxy).x,
+           distAll(pos+eps.yyx).x - distAll(pos-eps.yyx).x ) );
 }
 
 mat3 createCamera(vec3 ro, vec3 ta, float cr )
@@ -238,7 +138,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float maxt, in float
     float t = mint;
     for( int i=0; i<16; i++ )
     {
-        float h = map( ro + rd*t).dist;
+        float h = distAll( ro + rd*t).x;
         res = min( res, k*h/t );
         t += clamp( h, 0.05, 0.2 );
         if( res<0.001 || t>maxt ) break;
@@ -273,7 +173,7 @@ vec3 tex(vec2 p, float z)
     return vec3(pow(f, 16.0) + step(0.935, f));
 }
 
-vec3 light2(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, vec3 specular, float roughness)
+vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, vec3 specular, float roughness)
 {
     vec3 lvec = normalize(lpos - pos);
     vec3 hvec = normalize(lvec - ray);
@@ -289,14 +189,14 @@ vec3 light2(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, 
     return vec3(diff + spec) / (llen * llen);
 }
 
-vec3 Shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float roughness)
+vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float roughness)
 {
-    vec3 col = light2(pos, normal, ray, vec3(0.01), ro, diffuse, specular, roughness);
-    col += light2(pos, normal, ray, vec3(0.2, 0.4, 0.8), ro + vec3(0.0, 0.0, 2.0), diffuse, specular, roughness);
+    vec3 col = light(pos, normal, ray, vec3(0.01), ro, diffuse, specular, roughness);
+    col += light(pos, normal, ray, vec3(0.2, 0.4, 0.8), ro + vec3(0.0, 0.0, 2.0), diffuse, specular, roughness);
     return col;
 }
 
-vec3 Materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
+vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
 {
     vec3 pos = ro + ray * depth;
     vec3 nor = normal(pos, 0.0025);
@@ -306,13 +206,13 @@ vec3 Materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
         vec3 pattern = 19.3602379925 * spLocalNormal;
         float emission = min(1.0,  tex(pattern.zy, 113.09).x + tex(pattern.xz, 113.09).y + tex(pattern.xy, 113.09).z);
-        col += Shade(pos, nor, ray, vec3(.25), vec3(.15), 10.);
+        col += shade(pos, nor, ray, vec3(.25), vec3(.15), 10.);
         col += vec3(1.0, 0.25, 0.35) * emission * (sin(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_BODY) {
-        col += Shade(pos, nor, ray, vec3(.25), vec3(.15), 5.);
+        col += shade(pos, nor, ray, vec3(.25), vec3(.15), 5.);
         col += vec3(1.0, 0.25, 0.35) * (sin(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_STAGE) {
-        col += Shade(pos, nor, ray, vec3(1.), vec3(1.), 25.);
+        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.);
     }
 
     return col + vec3(0.01, 0.02, 0.04) * depth;
@@ -330,30 +230,7 @@ vec3 trace(vec3 ro, vec3 ray)
         }
         t += res.x;
     }
-    return Materialize(ro, ray, t, res);
-}
-
-vec3 light(Surface surface, vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos)
-{
-    vec3 lvec = normalize(lpos - pos);
-    vec3 hvec = normalize(lvec - ray);
-    float llen = length(lpos - pos);
-    float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
-    vec3 diffuse = surface.diffuse * col  * (1.0 / PI);
-    
-    float rough = surface.roughness;
-    float bpnorm = ( rough + 2.0 ) / ( 2.0 * PI );
-	vec3 spec = surface.specular * col * bpnorm * pow( max( 0.0, dot( normal, hvec ) ), rough );
-    
-    vec3 nor = 19.3602379925 * surface.pattern;
-    vec3 emission = surface.emission.rgb;
-    if (length(surface.pattern.rgb) > 0.0) {
-    	emission *= min(vec3(1.0),  tex(nor.zy, 113.09) + tex(nor.xz, 113.09) + tex(nor.xy, 113.09));
-    }
-    
-    diffuse *= sha;
-    spec *= sha;
-    return vec3(diffuse + spec) / (llen * llen) + emission * (sin(time) * 0.5 + 0.5 + 0.2);
+    return materialize(ro, ray, t, res);
 }
 
 vec3 getColor(vec2 p)
@@ -365,22 +242,8 @@ vec3 getColor(vec2 p)
     mat3 cm = createCamera(ro, ta, sin(time) * 0.1);
     ray = cm * normalize(vec3(p, 1.0));
     
-    // marching loop
-    Surface res = intersect(ro, ray);
-
     vec3 c = trace(ro, ray);
     return c;
-    
-    // hit check
-    if(res.dist > -0.5) {
-        vec3 pos = ro + ray * res.depth;
-        vec3 nor = normal(pos, 0.0025);
-        vec3 col = light(res, pos, nor, ray, vec3(0.01), ro);
-        col += light(res, pos, nor, ray, vec3(0.2, 0.4, 0.8), ro + vec3(0.0, 0.0, 2.0));
-        return col + vec3(0.01, 0.02, 0.04) * res.depth;
-    }else{
-        return vec3(1.0);
-    }
 }
 
 vec2 hash( vec2 p ){
