@@ -2,8 +2,9 @@
 #define PI 3.141592654
 #define U(z,w) (z.x < w.x ? z : w)
 
-#define MAT_WING 1.0
-#define MAT_BODY 2.0
+#define MAT_WING  1.0
+#define MAT_BODY  2.0
+#define MAT_STAGE 3.0
 
 const int Iterations = 3;
 
@@ -61,7 +62,7 @@ float sdBox( vec3 p, vec3 b )
   return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
 }
 
-float de(vec3 p, mat3 rot, float scale, out vec3 e) {
+float de(vec3 p, mat3 rot, float scale) {
 	vec3 offset = vec3(1,1,1);
 
     p*=transpose(rot);
@@ -89,16 +90,21 @@ float de(vec3 p, mat3 rot, float scale, out vec3 e) {
     return distance;
 }
 
+vec2 distStage(vec3 p, mat3 rot, float scale)
+{
+    float d = de(p, rot, scale);
+    return vec2(d, MAT_STAGE);
+}
+
 void intersectStage(inout Surface surface, vec3 p, mat3 rot, float scale)
 {
-    vec3 e;
-    float d = de(p, rot, scale, e);
+    float d = de(p, rot, scale);
     if (d < surface.dist) {
         surface.dist = d;
         surface.diffuse = vec3(1.);
         surface.specular = vec3(1.);
         surface.roughness = 25.0;
-        surface.emission = vec4(e, 1.0);
+        surface.emission = vec4(0.0, 0.0, 0.0, 1.0);
         surface.pattern = vec3(0.0);
     }
 }
