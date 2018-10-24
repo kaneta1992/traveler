@@ -32,49 +32,49 @@ mat3 rotateMat(float roll, float pitch, float yaw)
 
 float stepUp(float t, float len, float smo)
 {
-  float tt = mod(t += smo, len);
-  float stp = floor(t / len) - 1.0;
-  return smoothstep(0.0, smo, tt) + stp;
+    float tt = mod(t += smo, len);
+    float stp = floor(t / len) - 1.0;
+    return smoothstep(0.0, smo, tt) + stp;
 }
 
 float pingPong(float t, float len, float smo)
 {
-  t = mod(t + smo, len * 2.);
-  return 1.0 - (smoothstep(0., smo, t) - smoothstep(len, len + smo, t));
+    t = mod(t + smo, len * 2.);
+    return 1.0 - (smoothstep(0., smo, t) - smoothstep(len, len + smo, t));
 }
 
 float sphere( vec3 p, float s )
 {
-  return length(p)-s;
+    return length(p)-s;
 }
 
 float sdBox( vec3 p, vec3 b )
 {
-  vec3 d = abs(p) - b;
-  return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
+    vec3 d = abs(p) - b;
+    return min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0));
 }
 
 float de(vec3 p, mat3 rot, float scale) {
-	vec3 offset = vec3(1,1,1);
+    vec3 offset = vec3(1,1,1);
 
     p*=transpose(rot);
-	for (int i=0; i<Iterations; i++) {
+    for (int i=0; i<Iterations; i++) {
         
-		p*=rot;
-		p = abs(p);
+        p*=rot;
+        p = abs(p);
 
         // TODO: pingPongを変更する前と挙動が違うので後で見る
-		if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(beat, 63.5 * 0.5, 1.0));}
-		if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(beat, 63.5, 1.0));}
-		if (p.y < p.z) {p.yz = mix(p.zy, p.yz, pingPong(beat, 63.5 * 0.25, 1.0));}
+        if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(beat, 63.5 * 0.5, 1.0));}
+        if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(beat, 63.5, 1.0));}
+        if (p.y < p.z) {p.yz = mix(p.zy, p.yz, pingPong(beat, 63.5 * 0.25, 1.0));}
 
-		p.z -= 0.5*offset.z*(scale-1.)/scale;
-		p.z = -abs(-p.z);
-		p.z += 0.5*offset.z*(scale-1.)/scale;
+        p.z -= 0.5*offset.z*(scale-1.)/scale;
+        p.z = -abs(-p.z);
+        p.z += 0.5*offset.z*(scale-1.)/scale;
 
-		p.xy = scale*p.xy - offset.xy*(scale-1.);
-		p.z = scale*p.z;
-	}
+        p.xy = scale*p.xy - offset.xy*(scale-1.);
+        p.z = scale*p.z;
+    }
 
     vec3 d = abs(p) - vec3(1.,1.,1.);
     float distance = length(vec3(max(d, vec3(0.0))));
@@ -119,7 +119,7 @@ vec3 normal(vec3 pos, float e)
 {
     vec3 eps = vec3(e,0.0,0.0);
 
-	return normalize( vec3(
+    return normalize( vec3(
            distAll(pos+eps.xyy).x - distAll(pos-eps.xyy).x,
            distAll(pos+eps.yxy).x - distAll(pos-eps.yxy).x,
            distAll(pos+eps.yyx).x - distAll(pos-eps.yyx).x ) );
@@ -127,10 +127,10 @@ vec3 normal(vec3 pos, float e)
 
 mat3 createCamera(vec3 ro, vec3 ta, float cr )
 {
-	vec3 cw = normalize(ta - ro);
-	vec3 cp = vec3(sin(cr), cos(cr),0.0);
-	vec3 cu = normalize( cross(cw,cp) );
-	vec3 cv = normalize( cross(cu,cw) );
+    vec3 cw = normalize(ta - ro);
+    vec3 cp = vec3(sin(cr), cos(cr),0.0);
+    vec3 cu = normalize( cross(cw,cp) );
+    vec3 cv = normalize( cross(cu,cw) );
     return mat3( cu, cv, cw );
 }
 
@@ -155,8 +155,8 @@ mat2 rot(float x)
 
 float sdRect( vec2 p, vec2 b )
 {
-  vec2 d = abs(p) - b;
-  return min(max(d.x, d.y),0.0) + length(max(d,0.0));
+    vec2 d = abs(p) - b;
+    return min(max(d.x, d.y),0.0) + length(max(d,0.0));
 }
 
 float tex(vec2 p, float z)
@@ -238,9 +238,9 @@ vec3 trace(vec3 ro, vec3 ray)
 vec3 getColor(vec2 p)
 {
     // camera
-	ro = (vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5));
-	ta = (vec3(0.75, 0.75,  (sin(time * 0.1) * 0.5 + 0.5) * 3.0 + 0.2 + time * 0.5));
-	sp = (vec3(0.75, 0.75, 0.2 + time * 0.5));
+    ro = (vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5));
+    ta = (vec3(0.75, 0.75,  (sin(time * 0.1) * 0.5 + 0.5) * 3.0 + 0.2 + time * 0.5));
+    sp = (vec3(0.75, 0.75, 0.2 + time * 0.5));
     mat3 cm = createCamera(ro, ta, sin(time) * 0.1);
     ray = cm * normalize(vec3(p, 1.0));
     
@@ -249,8 +249,8 @@ vec3 getColor(vec2 p)
 }
 
 vec2 hash( vec2 p ){
-	p = vec2( dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));
-	return fract(sin(p)*43758.5453) * 2.0 - 1.0;
+    p = vec2( dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));
+    return fract(sin(p)*43758.5453) * 2.0 - 1.0;
 }
 
 float Bokeh(vec2 p, vec2 sp, float size, float mi, float blur)
