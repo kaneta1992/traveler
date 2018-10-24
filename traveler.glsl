@@ -8,7 +8,6 @@
 
 const int Iterations = 3;
 
-// TODO: グローバル変数が多すぎると拡張しずらいのでできれば考える
 float time;
 float beat, kick, hihat, snare;
 float stageScale;
