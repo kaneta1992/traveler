@@ -235,15 +235,41 @@ vec4 trace(vec3 ro, vec3 ray)
     return vec4(materialize(ro, ray, t, res), t);
 }
 
-vec3 getColor(vec2 p)
+void initTime(float t)
 {
-    // camera
+    time = t;
+    beat = time * 120.0 / 60.0;
+    beat = mod(beat, 64.0);
+
+    kick = mod(beat,1.);
+    hihat = beat < 16.0 ? 0.0 : pingPong(beat + 0.5, 1.0, 0.1) * 0.1;
+    snare = beat < 32.0 ? 0.0 : stepUp(beat - 32.5, 2.0, 0.5);
+}
+
+void scene1Init(vec2 p)
+{
+    stageScale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
+    stageRot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
+    vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
+    if (beat > 63.5) {
+        angle = mix(angle, vec3(0.0), (beat - 63.5) * 2.0);
+    }
+    stageRot2 = rotateMat(angle.x, angle.y, angle.z);
+    sphereRot = rotateMat(sin(time),cos(time), sin(time * .33));
+
     ro = (vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5));
     ta = (vec3(0.75, 0.75,  (sin(time * 0.1) * 0.5 + 0.5) * 3.0 + 0.2 + time * 0.5));
     sp = (vec3(0.75, 0.75, 0.2 + time * 0.5));
     mat3 cm = createCamera(ro, ta, sin(time) * 0.1);
     ray = cm * normalize(vec3(p, 1.0));
-    
+}
+
+vec3 scene(vec2 p)
+{
+    if (iTime < 6000.0) {
+        initTime(iTime);
+        scene1Init(p);
+    }
     vec4 c = trace(ro, ray);
     return c.rgb;
 }
@@ -296,24 +322,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // fragment position
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
 
-    time = iTime;
-    beat = time * 120.0 / 60.0;
-    beat = mod(beat, 64.0);
-
-    kick = mod(beat,1.);
-    hihat = beat < 16.0 ? 0.0 : pingPong(beat + 0.5, 1.0, 0.1) * 0.1;
-    snare = beat < 32.0 ? 0.0 : stepUp(beat - 32.5, 2.0, 0.5);
-
-    stageScale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
-    stageRot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
-    vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
-    if (beat > 63.5) {
-        angle = mix(angle, vec3(0.0), (beat - 63.5) * 2.0);
-    }
-    stageRot2 = rotateMat(angle.x, angle.y, angle.z);
-    sphereRot = rotateMat(sin(time),cos(time), sin(time * .33));
-
-    vec3 col =  getColor(p);
+    vec3 col =  scene(p);
     vec2 pp = fragCoord/iResolution.xy;
     col *= 0.5 + 0.5*pow( 16.0*pp.x*pp.y*(1.0-pp.x)*(1.0-pp.y), 0.05 );
     col = postProcess(p, col);
