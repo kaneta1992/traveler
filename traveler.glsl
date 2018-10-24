@@ -220,7 +220,7 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
     return mix(col, vec3(0.1, 0.2, 0.4) * 80.0, pow(depth * 0.01, 1.6));
 }
 
-vec3 trace(vec3 ro, vec3 ray)
+vec4 trace(vec3 ro, vec3 ray)
 {
     float t = 0.0;
     vec2 res;
@@ -232,7 +232,7 @@ vec3 trace(vec3 ro, vec3 ray)
         }
         t += res.x;
     }
-    return materialize(ro, ray, t, res);
+    return vec4(materialize(ro, ray, t, res), t);
 }
 
 vec3 getColor(vec2 p)
@@ -244,8 +244,8 @@ vec3 getColor(vec2 p)
     mat3 cm = createCamera(ro, ta, sin(time) * 0.1);
     ray = cm * normalize(vec3(p, 1.0));
     
-    vec3 c = trace(ro, ray);
-    return c;
+    vec4 c = trace(ro, ray);
+    return c.rgb;
 }
 
 vec2 hash( vec2 p ){
