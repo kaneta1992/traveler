@@ -138,7 +138,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float maxt, in float
 {
     float res = 1.0;
     float t = mint;
-    for( int i=0; i<16; i++ )
+    for( int i=0; i<4; i++ )
     {
         float h = distAll( ro + rd*t).x;
         res = min( res, k*h/t );
@@ -217,14 +217,14 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.);
     }
 
-    return mix(col, vec3(0.1, 0.2, 0.4) * 80.0, pow(depth * 0.01, 1.6));
+    return mix(col, vec3(0.1, 0.2, 0.4) * 80.0, pow(depth * 0.02, 2.1));
 }
 
 vec3 trace(vec3 ro, vec3 ray)
 {
     float t = 0.0;
     vec2 res;
-    for (int i = 0; i < 128; i++) {
+    for (int i = 0; i < 64; i++) {
         vec3 p = ro+ray*t;
         res = distAll(p);
         if( res.x < 0.001 ) {
