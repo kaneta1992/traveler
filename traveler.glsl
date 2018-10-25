@@ -224,7 +224,7 @@ vec4 trace(vec3 ro, vec3 ray)
     for (int i = 0; i < 128; i++) {
         vec3 p = ro+ray*t;
         res = distAll(p);
-        if( res.x < 0.001 ) {
+        if( res.x < 0.0001 ) {
             break;
         }
         t += res.x;
