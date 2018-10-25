@@ -175,7 +175,7 @@ float tex(vec2 p, float z)
     return pow(f, 16.0) + step(0.935, f);
 }
 
-vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, vec3 specular, float roughness)
+vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, vec3 specular, float smoothness)
 {
     vec3 lvec = normalize(lpos - pos);
     vec3 hvec = normalize(lvec - ray);
@@ -183,18 +183,18 @@ vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, v
     float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
     vec3 diff = diffuse * col  * (1.0 / PI);
 
-    float bpnorm = ( roughness + 2.0 ) / ( 2.0 * PI );
-    vec3 spec = specular * col * bpnorm * pow( max( 0.0, dot( normal, hvec ) ), roughness );
+    float bpnorm = ( smoothness + 2.0 ) / ( 2.0 * PI );
+    vec3 spec = specular * col * bpnorm * pow( max( 0.0, dot( normal, hvec ) ), smoothness );
 
     diff *= sha;
     spec *= sha;
     return vec3(diff + spec) / (llen * llen);
 }
 
-vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float roughness)
+vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float smoothness)
 {
-    vec3 col = light(pos, normal, ray, vec3(0.01), ro, diffuse, specular, roughness);
-    col += light(pos, normal, ray, vec3(0.2, 0.4, 0.8), ro + vec3(0.0, 0.0, 2.0), diffuse, specular, roughness);
+    vec3 col = light(pos, normal, ray, vec3(0.01), ro, diffuse, specular, smoothness);
+    col += light(pos, normal, ray, vec3(0.2, 0.4, 0.8), ro + vec3(0.0, 0.0, 2.0), diffuse, specular, smoothness);
     return col;
 }
 
