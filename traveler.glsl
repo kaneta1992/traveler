@@ -185,9 +185,7 @@ vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, v
     float bpnorm = ( roughness + 2.0 ) / ( 2.0 * PI );
     vec3 spec = specular * col * bpnorm * pow( max( 0.0, dot( normal, hvec ) ), roughness );
 
-    diff *= sha;
-    spec *= sha;
-    return vec3(diff + spec) / (llen * llen);
+    return vec3((diff + spec) * sha) / (llen * llen);
 }
 
 vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float roughness)
