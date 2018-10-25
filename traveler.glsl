@@ -137,7 +137,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float maxt, in float
 {
     float res = 1.0;
     float t = mint;
-    for( int i=0; i<16; i++ )
+    for( int i=0; i<4; i++ )
     {
         float h = distAll( ro + rd*t).x;
         res = min( res, k*h/t );
