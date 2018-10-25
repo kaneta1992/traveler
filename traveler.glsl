@@ -62,7 +62,6 @@ float de(vec3 p, mat3 rot, float scale) {
         p*=rot;
         p = abs(p);
 
-        // TODO: pingPongを変更する前と挙動が違うので後で見る
         if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(beat, 63.5 * 0.5, 1.0));}
         if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(beat, 63.5, 1.0));}
         if (p.y < p.z) {p.yz = mix(p.zy, p.yz, pingPong(beat, 63.5 * 0.25, 1.0));}
