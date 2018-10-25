@@ -238,7 +238,7 @@ void initTime(float t)
 {
     time = t;
     beat = time * 120.0 / 60.0;
-    beat = mod(beat, 64.0);
+    //beat = mod(beat, 64.0);
 
     kick = mod(beat,1.);
     hihat = beat < 16.0 ? 0.0 : pingPong(beat + 0.5, 1.0, 0.1) * 0.1;
@@ -250,9 +250,6 @@ void scene1Init(vec2 p)
     stageScale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
     stageRot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
     vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
-    if (beat > 63.5) {
-        angle = mix(angle, vec3(0.0), (beat - 63.5) * 2.0);
-    }
     stageRot2 = rotateMat(angle.x, angle.y, angle.z);
     sphereRot = rotateMat(sin(time),cos(time), sin(time * .33));
 
