@@ -171,7 +171,7 @@ float tex(vec2 p, float z)
         d = min(d, k);
     }
     float f = 1.0 / (1.0 + abs(d));
-    return pow(f, 16.0) + step(0.935, f);
+    return pow(f, 16.0) + smoothstep(0.9, 1.0, f);
 }
 
 vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, vec3 specular, float roughness)
