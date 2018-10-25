@@ -8,7 +8,6 @@
 
 const int Iterations = 3;
 
-// TODO: グローバル変数が多すぎると拡張しずらいのでできれば考える
 float time;
 float beat, kick, hihat, snare;
 float stageScale;
@@ -172,7 +171,7 @@ float tex(vec2 p, float z)
         d = min(d, k);
     }
     float f = 1.0 / (1.0 + abs(d));
-    return pow(f, 16.0) + step(0.935, f);
+    return pow(f, 16.0) + smoothstep(0.9, 1.0, f);
 }
 
 vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, vec3 specular, float smoothness)
@@ -186,9 +185,7 @@ vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, v
     float bpnorm = ( smoothness + 2.0 ) / ( 2.0 * PI );
     vec3 spec = specular * col * bpnorm * pow( max( 0.0, dot( normal, hvec ) ), smoothness );
 
-    diff *= sha;
-    spec *= sha;
-    return vec3(diff + spec) / (llen * llen);
+    return vec3((diff + spec) * sha) / (llen * llen);
 }
 
 vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float smoothness)
@@ -220,32 +217,55 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
     return mix(col, vec3(0.1, 0.2, 0.4) * 80.0, pow(depth * 0.02, 2.1));
 }
 
-vec3 trace(vec3 ro, vec3 ray)
+vec4 trace(vec3 ro, vec3 ray)
 {
     float t = 0.0;
     vec2 res;
     for (int i = 0; i < 64; i++) {
         vec3 p = ro+ray*t;
         res = distAll(p);
-        if( res.x < 0.001 ) {
+        if( res.x < 0.0001 ) {
             break;
         }
         t += res.x;
     }
-    return materialize(ro, ray, t, res);
+    return vec4(materialize(ro, ray, t, res), t);
 }
 
-vec3 getColor(vec2 p)
+void initTime(float t)
 {
-    // camera
+    time = t;
+    beat = time * 120.0 / 60.0;
+    //beat = mod(beat, 64.0);
+
+    kick = mod(beat,1.);
+    hihat = beat < 16.0 ? 0.0 : pingPong(beat + 0.5, 1.0, 0.1) * 0.1;
+    snare = beat < 32.0 ? 0.0 : stepUp(beat - 32.5, 2.0, 0.5);
+}
+
+void scene1Init(vec2 p)
+{
+    stageScale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
+    stageRot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
+    vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
+    stageRot2 = rotateMat(angle.x, angle.y, angle.z);
+    sphereRot = rotateMat(sin(time),cos(time), sin(time * .33));
+
     ro = (vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5));
     ta = (vec3(0.75, 0.75,  (sin(time * 0.1) * 0.5 + 0.5) * 3.0 + 0.2 + time * 0.5));
     sp = (vec3(0.75, 0.75, 0.2 + time * 0.5));
     mat3 cm = createCamera(ro, ta, sin(time) * 0.1);
     ray = cm * normalize(vec3(p, 1.0));
-    
-    vec3 c = trace(ro, ray);
-    return c;
+}
+
+vec3 scene(vec2 p)
+{
+    if (iTime < 6000.0) {
+        initTime(iTime);
+        scene1Init(p);
+    }
+    vec4 c = trace(ro, ray);
+    return c.rgb;
 }
 
 vec2 hash( vec2 p ){
@@ -296,24 +316,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // fragment position
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
 
-    time = iTime;
-    beat = time * 120.0 / 60.0;
-    beat = mod(beat, 64.0);
-
-    kick = mod(beat,1.);
-    hihat = beat < 16.0 ? 0.0 : pingPong(beat + 0.5, 1.0, 0.1) * 0.1;
-    snare = beat < 32.0 ? 0.0 : stepUp(beat - 32.5, 2.0, 0.5);
-
-    stageScale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
-    stageRot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
-    vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
-    if (beat > 63.5) {
-        angle = mix(angle, vec3(0.0), (beat - 63.5) * 2.0);
-    }
-    stageRot2 = rotateMat(angle.x, angle.y, angle.z);
-    sphereRot = rotateMat(sin(time),cos(time), sin(time * .33));
-
-    vec3 col =  getColor(p);
+    vec3 col =  scene(p);
     vec2 pp = fragCoord/iResolution.xy;
     col *= 0.5 + 0.5*pow( 16.0*pp.x*pp.y*(1.0-pp.x)*(1.0-pp.y), 0.05 );
     col = postProcess(p, col);
