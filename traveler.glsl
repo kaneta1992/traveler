@@ -234,7 +234,11 @@ vec4 trace(vec3 ro, vec3 ray)
 void initTime(float t)
 {
     time = t;
-    beat = time * 120.0 / 60.0;
+}
+
+void initBeat(float t)
+{
+    beat = t * 120.0 / 60.0;
     //beat = mod(beat, 64.0);
 
     kick = mod(beat,1.);
@@ -261,6 +265,7 @@ vec3 scene(vec2 p)
 {
     if (iTime < 6000.0) {
         initTime(iTime);
+        initBeat(time);
         scene1Init(p);
     }
     vec4 c = trace(ro, ray);
