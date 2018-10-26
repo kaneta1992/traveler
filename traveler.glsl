@@ -246,28 +246,48 @@ void initBeat(float t)
     snare = beat < 32.0 ? 0.0 : stepUp(beat - 32.5, 2.0, 0.5);
 }
 
-void scene1Init(vec2 p)
+void stageInit()
 {
     stageScale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
     stageRot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
     vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
     stageRot2 = rotateMat(angle.x, angle.y, angle.z);
     sphereRot = rotateMat(sin(time),cos(time), sin(time * .33));
+}
 
-    ro = (vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5));
-    ta = (vec3(0.75, 0.75,  (sin(time * 0.1) * 0.5 + 0.5) * 3.0 + 0.2 + time * 0.5));
-    sp = (vec3(0.75, 0.75, 0.2 + time * 0.5));
-    mat3 cm = createCamera(ro, ta, sin(time) * 0.1);
-    ray = cm * normalize(vec3(p, 1.0));
+void travelerInit(vec3 p)
+{
+    sp = p;
+}
+
+void cameraInit(vec2 p, vec3 origin, vec3 target, float angle, float fov)
+{
+    ro = origin;
+    ta = target;
+    mat3 cm = createCamera(ro, ta, angle);
+    ray = cm * normalize(vec3(p, fov));
 }
 
 vec3 scene(vec2 p)
 {
-    if (iTime < 6000.0) {
+    if (iTime < 10.0) {
         initTime(iTime);
+        initBeat(52.75);
+        travelerInit(vec3(0.75, 0.75, 0.25));
+        cameraInit(p, vec3(0.55, 0.9, 0.0), 
+                    sp,
+                    0.0,
+                    1.0);
+    } else if (iTime < 6000.0) {
+        initTime(iTime - 10.0);
         initBeat(time);
-        scene1Init(p);
+        travelerInit(vec3(0.75, 0.75, 0.2 + time * 0.5));
+        cameraInit(p, vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5), 
+                    vec3(0.75, 0.75,  (sin(time * 0.1) * 0.5 + 0.5) * 3.0 + 0.2 + time * 0.5),
+                    sin(time) * 0.1,
+                    1.0);
     }
+    stageInit();
     vec4 c = trace(ro, ray);
     return c.rgb;
 }
