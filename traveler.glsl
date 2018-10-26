@@ -10,7 +10,9 @@ const int Iterations = 3;
 
 float time;
 float beat, kick, hihat, snare;
-float stageScale;
+float stageScale, bloomStage, bloomTraveler;
+float edgeOnly;
+vec3 fogColor;
 mat3 sphereRot, stageRot, stageRot2;
 vec3 ray;
 vec3 ro, ta, sp;
@@ -210,10 +212,10 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 5.);
         col += vec3(1.0, 0.25, 0.35) * 2. * (sin(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_STAGE) {
-        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.);
+        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) * edgeOnly;
     }
 
-    return mix(col, vec3(0.1, 0.2, 0.4) * 80.0, pow(depth * 0.02, 2.1));
+    return mix(col, fogColor, pow(depth * 0.02, 2.1));
 }
 
 vec4 trace(vec3 ro, vec3 ray)
@@ -268,11 +270,30 @@ void cameraInit(vec2 p, vec3 origin, vec3 target, float angle, float fov)
     ray = cm * normalize(vec3(p, fov));
 }
 
+void bloomInit(float stage, float traveler)
+{
+    bloomStage = stage;
+    bloomTraveler = traveler;
+}
+
+void fogInit(vec3 col)
+{
+    fogColor = col;
+}
+
+void stageEdgeOnly(float val)
+{
+    edgeOnly = 1.0 - val;
+}
+
 vec3 scene(vec2 p)
 {
     if (iTime < 10.0) {
         initTime(iTime);
         initBeat(52.75);
+        fogInit(vec3(0.0));
+        stageEdgeOnly(1.0);
+        bloomInit(0.0, max(0.2, sin(time) * 0.5 + 0.5));
         travelerInit(vec3(0.75, 0.75, 0.25));
         cameraInit(p, vec3(0.55, 0.9, 0.0), 
                     sp,
@@ -281,6 +302,9 @@ vec3 scene(vec2 p)
     } else if (iTime < 6000.0) {
         initTime(iTime - 10.0);
         initBeat(time);
+        fogInit(vec3(0.1, 0.2, 0.4) * 80.0);
+        stageEdgeOnly(0.0);
+        bloomInit(1.0, max(0.2, sin(time) * 0.5 + 0.5));
         travelerInit(vec3(0.75, 0.75, 0.2 + time * 0.5));
         cameraInit(p, vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5), 
                     vec3(0.75, 0.75,  (sin(time * 0.1) * 0.5 + 0.5) * 3.0 + 0.2 + time * 0.5),
@@ -332,7 +356,7 @@ vec3 postProcess(vec2 uv, vec3 col)
     float sflare2 = pow(max(0.0, dot(normalize(sp - ro), ray)), 8.0);
     vec3 s = sflare * vec3(1.0, 0.25, 0.35) * 1.0 + sflare2 * di * vec3(1.0, 0.25, 0.35) * 0.01;
     
-    return col + f + s * max(0.2, sin(time) * 0.5 + 0.5);
+    return col + f * bloomStage + s * bloomTraveler;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
