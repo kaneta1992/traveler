@@ -17,6 +17,11 @@ mat3 sphereRot, stageRot, stageRot2;
 vec3 ray;
 vec3 ro, ta, sp;
 
+float sm(float start, float end, float t, float smo)
+{
+    return smoothstep(start, start + smo, t) - smoothstep(end - smo, end, t);
+}
+
 mat3 rotateMat(float roll, float pitch, float yaw)
 {
     float cp = cos(pitch);
@@ -212,7 +217,12 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 5.);
         col += vec3(1.0, 0.25, 0.35) * 2. * (cos(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_STAGE) {
-        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) * edgeOnly;
+        vec3 n = pos * 9.3602379925;
+        float edge = tex(n.zy, 113.09) + tex(n.xz, 113.09) + tex(n.xy, 113.09);
+        float len = distance(sp, pos);
+        float t = mod(time * 1.5, 10.0);
+        float edgePow = sm(t, t + 2.0, len, 0.5);
+        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) * edgeOnly + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * edgePow;
     }
 
     return mix(col, fogColor, pow(depth * 0.02, 2.1));
