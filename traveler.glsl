@@ -10,7 +10,7 @@ const int Iterations = 3;
 
 float time;
 float beat, kick, hihat, snare;
-float stageScale, bloomStage, bloomTraveler;
+float stageScale, bloomStage, bloomTraveler, bloomStageScale, bloomTravelerScale;
 float edgeOnly;
 vec3 fogColor;
 mat3 sphereRot, stageRot, stageRot2;
@@ -207,10 +207,10 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 pattern = 19.3602379925 * spLocalNormal;
         float emission = min(1.0,  tex(pattern.zy, 113.09) + tex(pattern.xz, 113.09) + tex(pattern.xy, 113.09));
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 10.);
-        col += vec3(1.0, 0.25, 0.35) * 2. * emission * (sin(time) * 0.5 + 0.5 + 0.2);
+        col += vec3(1.0, 0.25, 0.35) * 2. * emission * (cos(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_BODY) {
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 5.);
-        col += vec3(1.0, 0.25, 0.35) * 2. * (sin(time) * 0.5 + 0.5 + 0.2);
+        col += vec3(1.0, 0.25, 0.35) * 2. * (cos(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_STAGE) {
         col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) * edgeOnly;
     }
@@ -270,10 +270,12 @@ void cameraInit(vec2 p, vec3 origin, vec3 target, float angle, float fov)
     ray = cm * normalize(vec3(p, fov));
 }
 
-void bloomInit(float stage, float traveler)
+void bloomInit(float stage, float ss, float traveler, float ts)
 {
     bloomStage = stage;
     bloomTraveler = traveler;
+    bloomStageScale = ss;
+    bloomTravelerScale = ts;
 }
 
 void fogInit(vec3 col)
@@ -286,6 +288,11 @@ void stageEdgeOnly(float val)
     edgeOnly = 1.0 - val;
 }
 
+vec2 hash( vec2 p ){
+    p = vec2( dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));
+    return fract(sin(p)*43758.5453) * 2.0 - 1.0;
+}
+
 vec3 scene(vec2 p)
 {
     if (iTime < 10.0) {
@@ -293,18 +300,21 @@ vec3 scene(vec2 p)
         initBeat(52.75);
         fogInit(vec3(0.0));
         stageEdgeOnly(1.0);
-        bloomInit(0.0, max(0.2, sin(time) * 0.5 + 0.5));
-        travelerInit(vec3(0.75, 0.75, 0.25));
-        cameraInit(p, vec3(0.55, 0.9, 0.0), 
-                    sp,
+        travelerInit(vec3(0.75, 0.75, mix(-20.0, 20.0, time / 10.0)));
+        vec3 cameraPos = vec3(0.9, 0.8, 0.0);
+        vec2 rnd = hash(vec2(time)) * 0.05 * max(0.0, 1.0 - distance(cameraPos, sp) / 5.0);
+        cameraPos.xy += rnd;
+        cameraInit(p, cameraPos,
+                    vec3(vec2(0.75, 0.75) + rnd, 1.0),
                     0.0,
-                    1.0);
+                    3.0);
+        bloomInit(0.0, 1.0, max(0.2, cos(time) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
     } else if (iTime < 6000.0) {
         initTime(iTime - 10.0);
         initBeat(time);
         fogInit(vec3(0.1, 0.2, 0.4) * 80.0);
         stageEdgeOnly(0.0);
-        bloomInit(1.0, max(0.2, sin(time) * 0.5 + 0.5));
+        bloomInit(1.0, 8.0, max(0.2, sin(time) * 0.5 + 0.5), 8.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + time * 0.5));
         cameraInit(p, vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5), 
                     vec3(0.75, 0.75,  (sin(time * 0.1) * 0.5 + 0.5) * 3.0 + 0.2 + time * 0.5),
@@ -314,11 +324,6 @@ vec3 scene(vec2 p)
     stageInit();
     vec4 c = trace(ro, ray);
     return c.rgb;
-}
-
-vec2 hash( vec2 p ){
-    p = vec2( dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));
-    return fract(sin(p)*43758.5453) * 2.0 - 1.0;
 }
 
 float Bokeh(vec2 p, vec2 sp, float size, float mi, float blur)
@@ -348,12 +353,12 @@ vec3 postProcess(vec2 uv, vec3 col)
     di += dirt(uv- vec2(0.41), 2.75);
     di += dirt(uv- vec2(0.3), 2.5);
 
-    float flare = pow(max(0.0, dot(vec3(0.0, 0.0, 1.0), ray)), 10.0);
-    float flare2 = pow(max(0.0, dot(vec3(0.0, 0.0, 1.0), ray)), 8.0);
+    float flare = pow(max(0.0, dot(vec3(0.0, 0.0, 1.0), ray)), bloomStageScale * 1.25);
+    float flare2 = pow(max(0.0, dot(vec3(0.0, 0.0, 1.0), ray)), bloomStageScale);
     vec3 f = flare * vec3(0.1, 0.2, 0.4) * 3.5 + flare2 * di * vec3(0.1, 0.2, 0.4) * 0.1;
     
-    float sflare = pow(max(0.0, dot(normalize(sp - ro), ray)), 10.0);
-    float sflare2 = pow(max(0.0, dot(normalize(sp - ro), ray)), 8.0);
+    float sflare = pow(max(0.0, dot(normalize(sp - ro), ray)), bloomTravelerScale * 1.25);
+    float sflare2 = pow(max(0.0, dot(normalize(sp - ro), ray)), bloomTravelerScale);
     vec3 s = sflare * vec3(1.0, 0.25, 0.35) * 1.0 + sflare2 * di * vec3(1.0, 0.25, 0.35) * 0.01;
     
     return col + f * bloomStage + s * bloomTraveler;
