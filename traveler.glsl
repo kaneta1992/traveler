@@ -129,7 +129,7 @@ vec2 distGlow(vec3 p)
     float len = distance(sp, p);
     float t = mod(time, 5.) + floor(len / 5.0) * 5.0;
 
-    float frontSp = sphere(p - sp, t + 0.5);
+    float frontSp = sphere(p - sp, t + 1.);
     float backSp = sphere(p - sp, t);
     float cut = max(frontSp, -backSp);
     vec2 st = U(st1, st2);
@@ -254,12 +254,10 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         float len = distance(sp, pos);
         float t = mod(time * 1.5, 4.) + floor(len / 4.0) * 4.0;
         float edgePow = sm(t, t + 3.0, len, 0.5);
-
         vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
         vec3 lvec = normalize(lpos - pos);
         float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
-
-        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) * sha * edgeOnly + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * edgePow;
+        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * edgePow;
     }
 
     return mix(col, fogColor, pow(depth * 0.02, 2.1));
@@ -272,14 +270,23 @@ vec3 rgb2hsv(vec3 hsv)
 	return hsv.z * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), hsv.y);
 }
 
+vec3 hash3( vec3 p ){
+    vec3 q = vec3(dot(p,vec3(127.1,311.7, 114.5)), dot(p,vec3(269.5,183.3, 191.9)), dot(p,vec3(419.2,371.9, 514.1)));
+    return fract(sin(q)*43758.5453);
+}
+
 vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
 {
     float t = 0.0;
     vec2 res;
     vec3 col = vec3(0.);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 16; i++) {
         vec3 p = ro+ray*t;
-        res = distGlow(p);
+        float len = distance(sp, p);
+        float tt = mod(time, 5.) + floor(len / 5.0) * 5.0;
+        vec3 h = hash3(floor(p * 50.0) / 50.0) * 2.0 - 1.0;
+        // TODO: smでバラバラ感を制御しているが思った挙動じゃないので調査する
+        res = distGlow(p + h * 0.2 * (1.0 - sm(tt, tt + 2.0, len, .25)));
         col += max(vec3(0.0), 0.0015 / res.x) * rgb2hsv(vec3(p.x * 1., 0.5, 1.0));
         t += res.x * 0.9;
         if (maxDepth < t) {
