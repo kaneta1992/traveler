@@ -127,7 +127,7 @@ vec2 distGlow(vec3 p)
     vec2 st2 = distStage(pp, stageRot2 * stageRot, stageScale);
 
     float len = distance(sp, p);
-    float t = mod(time, 7.);
+    float t = mod(time, 5.) + floor(len / 5.0) * 5.0;
 
     float frontSp = sphere(p - sp, t + 0.5);
     float backSp = sphere(p - sp, t);
@@ -181,6 +181,22 @@ float sdRect( vec2 p, vec2 b )
     return min(max(d.x, d.y),0.0) + length(max(d,0.0));
 }
 
+float tex2(vec2 p, float z)
+{
+    vec2 q = (fract(p / 10.0) - 0.5) * 10.0;
+    float d = 9999.0;
+    for (int i = 0; i < 2; ++i) {
+        q = abs(q) - 0.5;
+        q *= rot(0.785398);
+        q = abs(q) - 0.5;
+        q *= rot(z * 0.5);
+        float k = sdRect(q, vec2(1.0, 0.55 + q.x));
+        d = min(d, k);
+    }
+    float f = 1.0 / (1.0 + abs(d));
+    return pow(f, 16.0) + smoothstep(0.95, 1.0, f);
+}
+
 float tex(vec2 p, float z)
 {
     vec2 q = (fract(p / 10.0) - 0.5) * 10.0;
@@ -194,7 +210,7 @@ float tex(vec2 p, float z)
         d = min(d, k);
     }
     float f = 1.0 / (1.0 + abs(d));
-    return pow(f, 16.0) + smoothstep(0.9, 1.0, f);
+    return pow(f, 16.0) + smoothstep(0.95, 1.0, f);
 }
 
 vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, vec3 specular, float smoothness)
@@ -202,13 +218,12 @@ vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, v
     vec3 lvec = normalize(lpos - pos);
     vec3 hvec = normalize(lvec - ray);
     float llen = length(lpos - pos);
-    float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
     vec3 diff = diffuse * col  * (1.0 / PI);
 
     float bpnorm = ( smoothness + 2.0 ) / ( 2.0 * PI );
     vec3 spec = specular * col * bpnorm * pow( max( 0.0, dot( normal, hvec ) ), smoothness );
 
-    return vec3((diff + spec) * sha) / (llen * llen);
+    return vec3(diff + spec) / (llen * llen);
 }
 
 vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float smoothness)
@@ -235,11 +250,16 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         col += vec3(1.0, 0.25, 0.35) * 2. * (cos(time) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_STAGE) {
         vec3 n = pos * 9.3602379925;
-        float edge = tex(n.zy, 113.09) + tex(n.xz, 113.09) + tex(n.xy, 113.09);
+        float edge = tex2(n.zy, 113.09) + tex2(n.xz, 113.09) + tex2(n.xy, 113.09);
         float len = distance(sp, pos);
-        float t = mod(time * 1., 10.0);
+        float t = mod(time * 1.5, 4.) + floor(len / 4.0) * 4.0;
         float edgePow = sm(t, t + 3.0, len, 0.5);
-        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) * edgeOnly + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * edgePow;
+
+        vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
+        vec3 lvec = normalize(lpos - pos);
+        float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
+
+        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) * sha * edgeOnly + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * edgePow;
     }
 
     return mix(col, fogColor, pow(depth * 0.02, 2.1));
@@ -261,7 +281,7 @@ vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
         vec3 p = ro+ray*t;
         res = distGlow(p);
         col += max(vec3(0.0), 0.0015 / res.x) * rgb2hsv(vec3(p.x * 1., 0.5, 1.0));
-        t += res.x;
+        t += res.x * 0.9;
         if (maxDepth < t) {
             break;
         }
