@@ -120,6 +120,23 @@ vec2 distAll(vec3 p)
     return U(sp, U(st1, st2));
 }
 
+vec2 distGlow(vec3 p)
+{
+    vec3 pp = mod(p, 1.5) - 0.75;
+    vec2 st1 = distStage(pp, stageRot, stageScale);
+    vec2 st2 = distStage(pp, stageRot2 * stageRot, stageScale);
+
+    float len = distance(sp, p);
+    float t = mod(time, 7.);
+
+    float frontSp = sphere(p - sp, t + 0.5);
+    float backSp = sphere(p - sp, t);
+    float cut = max(frontSp, -backSp);
+    vec2 st = U(st1, st2);
+    st.x = max(st.x, cut);
+    return st;
+}
+
 vec3 normal(vec3 pos, float e)
 {
     vec3 eps = vec3(e,0.0,0.0);
@@ -220,12 +237,36 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 n = pos * 9.3602379925;
         float edge = tex(n.zy, 113.09) + tex(n.xz, 113.09) + tex(n.xy, 113.09);
         float len = distance(sp, pos);
-        float t = mod(time * 1.5, 10.0);
-        float edgePow = sm(t, t + 2.0, len, 0.5);
+        float t = mod(time * 1., 10.0);
+        float edgePow = sm(t, t + 3.0, len, 0.5);
         col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) * edgeOnly + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * edgePow;
     }
 
     return mix(col, fogColor, pow(depth * 0.02, 2.1));
+}
+
+vec3 rgb2hsv(vec3 hsv)
+{
+	vec4 t = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	vec3 p = abs(fract(vec3(hsv.x) + t.xyz) * 6.0 - vec3(t.w));
+	return hsv.z * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), hsv.y);
+}
+
+vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
+{
+    float t = 0.0;
+    vec2 res;
+    vec3 col = vec3(0.);
+    for (int i = 0; i < 8; i++) {
+        vec3 p = ro+ray*t;
+        res = distGlow(p);
+        col += max(vec3(0.0), 0.0015 / res.x) * rgb2hsv(vec3(p.x * 1., 0.5, 1.0));
+        t += res.x;
+        if (maxDepth < t) {
+            break;
+        }
+    }
+    return col;
 }
 
 vec4 trace(vec3 ro, vec3 ray)
@@ -305,8 +346,9 @@ vec2 hash( vec2 p ){
 
 vec3 scene(vec2 p)
 {
-    if (iTime < 10.0) {
-        initTime(iTime);
+    float t = iTime;
+    if (t < 10.0) {
+        initTime(t);
         initBeat(52.75);
         fogInit(vec3(0.0));
         stageEdgeOnly(1.0);
@@ -319,8 +361,8 @@ vec3 scene(vec2 p)
                     0.0,
                     3.0);
         bloomInit(0.0, 1.0, max(0.2, cos(time) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
-    } else if (iTime < 6000.0) {
-        initTime(iTime - 10.0);
+    } else if (t < 6000.0) {
+        initTime(t - 10.0);
         initBeat(time);
         fogInit(vec3(0.1, 0.2, 0.4) * 80.0);
         stageEdgeOnly(0.0);
@@ -333,6 +375,7 @@ vec3 scene(vec2 p)
     }
     stageInit();
     vec4 c = trace(ro, ray);
+    c.rgb += glowTrace(ro, ray, c.w + 0.01);
     return c.rgb;
 }
 
