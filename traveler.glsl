@@ -284,11 +284,12 @@ vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
         vec3 p = ro+ray*t;
         float len = distance(sp, p);
         float tt = mod(time, 5.) + floor(len / 5.0) * 5.0;
-        vec3 h = hash3(floor(p * 50.0) / 50.0) * 2.0 - 1.0;
+        vec3 h = hash3(floor(p * 30.0) / 30.0) * 2.0 - 1.0;
+        float val = 1.0 - sm(tt, tt + 2.0, len, .25);
         // TODO: smでバラバラ感を制御しているが思った挙動じゃないので調査する
-        res = distGlow(p + h * 0.2 * (1.0 - sm(tt, tt + 2.0, len, .25)));
-        col += max(vec3(0.0), 0.0015 / res.x) * rgb2hsv(vec3(p.x * 1., 0.5, 1.0));
-        t += res.x * 0.9;
+        res = distGlow(p + h * 0.1 * val);
+        col += max(vec3(0.0), 0.001 / res.x) * rgb2hsv(vec3(p.x * 1., 0.8, 1.));
+        t += res.x * 0.8;
         if (maxDepth < t) {
             break;
         }
