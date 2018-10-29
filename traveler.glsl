@@ -298,6 +298,7 @@ vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
         float len = distance(sp, p);
         float gt = glowTime(p);
 
+        // 光らせたくないときは-1.0を返してる
         if (gt < 0.0) {
             return vec3(0.);
         }
