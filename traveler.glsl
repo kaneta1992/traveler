@@ -287,9 +287,9 @@ vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
         vec3 h = hash3(floor(p * 30.0) / 30.0) * 2.0 - 1.0;
         float val = 1.0 - sm(tt, tt + 2.0, len, .25);
         // TODO: smでバラバラ感を制御しているが思った挙動じゃないので調査する
-        res = distGlow(p + h * 0.1 * val);
+        res = distGlow(p + h * 0.15 * val);
         col += max(vec3(0.0), 0.001 / res.x) * rgb2hsv(vec3(p.x * 1., 0.8, 1.));
-        t += res.x * 0.8;
+        t += res.x;
         if (maxDepth < t) {
             break;
         }
@@ -394,7 +394,7 @@ vec3 scene(vec2 p)
         initBeat(time);
         fogInit(vec3(0.1, 0.2, 0.4) * 80.0);
         stageEdgeOnly(0.0);
-        bloomInit(1.0, 8.0, max(0.2, sin(time) * 0.5 + 0.5), 8.0);
+        bloomInit(1.0, 8.0, max(0.2, cos(time) * 0.5 + 0.5), 8.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + time * 0.5));
         cameraInit(p, vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5), 
                     vec3(0.75, 0.75,  (sin(time * 0.1) * 0.5 + 0.5) * 3.0 + 0.2 + time * 0.5),
@@ -436,7 +436,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 
     float flare = pow(max(0.0, dot(vec3(0.0, 0.0, 1.0), ray)), bloomStageScale * 1.25);
     float flare2 = pow(max(0.0, dot(vec3(0.0, 0.0, 1.0), ray)), bloomStageScale);
-    vec3 f = flare * vec3(0.1, 0.2, 0.4) * 3.5 + flare2 * di * vec3(0.1, 0.2, 0.4) * 0.1;
+    vec3 f = flare * vec3(0.1, 0.2, 0.4) * 2. + flare2 * di * vec3(0.1, 0.2, 0.4) * 0.1;
     
     float sflare = pow(max(0.0, dot(normalize(sp - ro), ray)), bloomTravelerScale * 1.25);
     float sflare2 = pow(max(0.0, dot(normalize(sp - ro), ray)), bloomTravelerScale);
