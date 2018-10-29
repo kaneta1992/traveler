@@ -57,6 +57,16 @@ float glowTime(vec3 p)
     return mix(-1.0, mix(t, tt, step(10.0, t)), step(0., t));
 }
 
+float patternIntensity(vec3 p)
+{
+    float t = iTime - 10.0;
+    if (t < 0.0) {
+        return 0.0;
+    }
+    float len = distance(sp, p);
+    return sm(0.0, 2., mod(len - t * 1.5, 6.0), .5);
+}
+
 float sphere( vec3 p, float s )
 {
     return length(p)-s;
@@ -258,12 +268,10 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
     } else if (mat.y == MAT_STAGE) {
         vec3 n = pos * 9.3602379925;
         float edge = tex2(n.zy, 113.09) + tex2(n.xz, 113.09) + tex2(n.xy, 113.09);
-        float len = distance(sp, pos);
-        float edgePow = sm(0.0, 2., mod(len - time * 1.5, 6.0), .5);
         vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
         vec3 lvec = normalize(lpos - pos);
         float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
-        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * edgePow;
+        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos);
     }
 
     return mix(col, fogColor, pow(depth * 0.02, 2.1));
