@@ -259,8 +259,7 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 n = pos * 9.3602379925;
         float edge = tex2(n.zy, 113.09) + tex2(n.xz, 113.09) + tex2(n.xy, 113.09);
         float len = distance(sp, pos);
-        float t = mod(time * 1.5, 4.) + floor(len / 4.0) * 4.0;
-        float edgePow = sm(t, t + 3.0, len, 0.5);
+        float edgePow = sm(0.0, 2., mod(len - time * 1.5, 6.0), .5);
         vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
         vec3 lvec = normalize(lpos - pos);
         float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
