@@ -49,6 +49,14 @@ float pingPong(float t, float len, float smo)
     return 1.0 - (smoothstep(0., smo, t) - smoothstep(len, len + smo, t));
 }
 
+float glowTime(vec3 p)
+{
+    float t = iTime - 10.0;
+    float len = distance(sp, p);
+    float tt = mod(t, 5.) + floor(len / 5.0) * 5.0;
+    return mix(-1.0, mix(t, tt, step(10.0, t)), step(0., t));
+}
+
 float sphere( vec3 p, float s )
 {
     return length(p)-s;
@@ -126,11 +134,10 @@ vec2 distGlow(vec3 p)
     vec2 st1 = distStage(pp, stageRot, stageScale);
     vec2 st2 = distStage(pp, stageRot2 * stageRot, stageScale);
 
-    float len = distance(sp, p);
-    float t = mod(time, 5.) + floor(len / 5.0) * 5.0;
+    float gt = glowTime(p);
 
-    float frontSp = sphere(p - sp, t + 1.);
-    float backSp = sphere(p - sp, t);
+    float frontSp = sphere(p - sp, gt + 1.);
+    float backSp = sphere(p - sp, gt);
     float cut = max(frontSp, -backSp);
     vec2 st = U(st1, st2);
     st.x = max(st.x, cut);
@@ -278,16 +285,20 @@ vec3 hash3( vec3 p ){
 vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
 {
     float t = 0.0;
-    vec2 res;
     vec3 col = vec3(0.);
     for (int i = 0; i < 16; i++) {
         vec3 p = ro+ray*t;
         float len = distance(sp, p);
-        float tt = mod(time, 5.) + floor(len / 5.0) * 5.0;
+        float gt = glowTime(p);
+
+        if (gt < 0.0) {
+            return vec3(0.);
+        }
+
         vec3 h = hash3(floor(p * 30.0) / 30.0) * 2.0 - 1.0;
-        float val = 1.0 - sm(tt, tt + 2.0, len, .25);
+        float val = 1.0 - sm(gt, gt + 2.0, len, .25);
         // TODO: smでバラバラ感を制御しているが思った挙動じゃないので調査する
-        res = distGlow(p + h * 0.15 * val);
+        vec2 res = distGlow(p + h * 0.15 * val);
         col += max(vec3(0.0), 0.001 / res.x) * rgb2hsv(vec3(p.x * 1., 0.8, 1.));
         t += res.x;
         if (maxDepth < t) {
