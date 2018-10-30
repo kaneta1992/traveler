@@ -51,7 +51,7 @@ float pingPong(float t, float len, float smo)
 
 float glowTime(vec3 p)
 {
-    float t = iTime - 10.0;
+    float t = beat - 16.0;
     float len = distance(sp, p);
     float tt = mod(t, 5.) + floor(len / 5.0) * 5.0;
     return mix(-1.0, mix(t, tt, step(10.0, t)), step(0., t));
@@ -59,7 +59,7 @@ float glowTime(vec3 p)
 
 float patternIntensity(vec3 p)
 {
-    float t = iTime - 10.0;
+    float t = beat - 16.0;
     if (t < 0.0) {
         return 0.0;
     }
@@ -87,9 +87,9 @@ float de(vec3 p, mat3 rot, float scale) {
         p*=rot;
         p = abs(p);
 
-        if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(beat, 63.5 * 0.5, 1.0));}
-        if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(beat, 63.5, 1.0));}
-        if (p.y < p.z) {p.yz = mix(p.zy, p.yz, pingPong(beat, 63.5 * 0.25, 1.0));}
+        if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(sceneBeat, 63.5 * 0.5, 1.0));}
+        if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(sceneBeat, 63.5, 1.0));}
+        if (p.y < p.z) {p.yz = mix(p.zy, p.yz, pingPong(sceneBeat, 63.5 * 0.25, 1.0));}
 
         p.z -= 0.5*offset.z*(scale-1.)/scale;
         p.z = -abs(-p.z);
@@ -261,10 +261,10 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 pattern = 19.3602379925 * spLocalNormal;
         float emission = min(1.0,  tex(pattern.zy, 113.09) + tex(pattern.xz, 113.09) + tex(pattern.xy, 113.09));
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 10.);
-        col += vec3(1.0, 0.25, 0.35) * 2. * emission * (cos(time) * 0.5 + 0.5 + 0.2);
+        col += vec3(1.0, 0.25, 0.35) * 2. * emission * (cos(sceneBeat * 0.5) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_BODY) {
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 5.);
-        col += vec3(1.0, 0.25, 0.35) * 2. * (cos(time) * 0.5 + 0.5 + 0.2);
+        col += vec3(1.0, 0.25, 0.35) * 2. * (cos(sceneBeat * 0.5) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_STAGE) {
         vec3 n = pos * 9.3602379925;
         float edge = tex2(n.zy, 113.09) + tex2(n.xz, 113.09) + tex2(n.xy, 113.09);
@@ -333,8 +333,7 @@ vec4 trace(vec3 ro, vec3 ray)
 
 void initBeat(float offset)
 {
-    sceneBeat = (time + offset) * 120.0 / 60.0;
-    //beat = mod(beat, 64.0)
+    sceneBeat = beat + offset;
 
     kick = mod(sceneBeat, 1.);
     hihat = sceneBeat < 16.0 ? 0.0 : pingPong(sceneBeat + 0.5, 1.0, 0.1) * 0.1;
@@ -404,7 +403,7 @@ vec3 scene(vec2 p)
                     3.0);
         bloomInit(0.0, 1.0, max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
     } else if (beat < 6000.0) {
-        initBeat(-10.0);
+        initBeat(-16.0);
         fogInit(vec3(0.1, 0.2, 0.4) * 80.0);
         stageEdgeOnly(0.0);
         bloomInit(1.0, 8.0, max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5), 8.0);
