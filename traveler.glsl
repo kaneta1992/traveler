@@ -445,14 +445,17 @@ vec3 postProcess(vec2 uv, vec3 col)
     di += dirt(uv - vec2(0.17), 3.0);
     di += dirt(uv- vec2(0.41), 2.75);
     di += dirt(uv- vec2(0.3), 2.5);
+    di += dirt(uv - vec2(0.47), 3.5);
+    di += dirt(uv- vec2(0.21), 4.0);
+    di += dirt(uv- vec2(0.6), 4.5);
 
     float flare = pow(max(0.0, dot(vec3(0.0, 0.0, 1.0), ray)), bloomStageScale * 1.25);
     float flare2 = pow(max(0.0, dot(vec3(0.0, 0.0, 1.0), ray)), bloomStageScale);
-    vec3 f = flare * vec3(0.1, 0.2, 0.4) * 2. + flare2 * di * vec3(0.1, 0.2, 0.4) * 0.1;
+    vec3 f = flare * vec3(0.1, 0.2, 0.4) * 3. + flare2 * di * vec3(0.1, 0.2, 0.4) * 0.1;
     
     float sflare = pow(max(0.0, dot(normalize(sp - ro), ray)), bloomTravelerScale * 1.25);
     float sflare2 = pow(max(0.0, dot(normalize(sp - ro), ray)), bloomTravelerScale);
-    vec3 s = sflare * vec3(1.0, 0.25, 0.35) * 1.0 + sflare2 * di * vec3(1.0, 0.25, 0.35) * 0.01;
+    vec3 s = sflare * vec3(1.0, 0.25, 0.35) * 1.0 + sflare2 * di * vec3(1.0, 0.25, 0.35) * 0.05;
     
     return col + f * bloomStage + s * bloomTraveler;
 }
