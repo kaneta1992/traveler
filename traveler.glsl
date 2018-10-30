@@ -5,6 +5,7 @@
 #define MAT_WING  1.0
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
+#define saturate(x) (clamp(x, 0.0, 1.0))
 
 const int Iterations = 3;
 
@@ -56,7 +57,7 @@ float glowTime(vec3 p)
 {
     float t = beat - 16.0;
     float len = distance(sp, p);
-    float tt = mod(t, 5.) + floor(len / 5.0) * 5.0;
+    float tt = mod(t, 8.) + floor(len / 8.0) * 8.0;
     return mix(-1.0, mix(t, tt, step(10.0, t)), step(0., t));
 }
 
@@ -274,7 +275,14 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
         vec3 lvec = normalize(lpos - pos);
         float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
-        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos);
+
+        // ステージが出現する演出
+        float noShade = 0.0;
+        if (beat > 16.0) {
+            noShade = step(distance(pos, sp), sceneBeat);
+        }
+
+        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly * noShade + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos);
     }
 
     return mix(col, fogColor, pow(depth * 0.02, 2.1));
@@ -310,7 +318,7 @@ vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
         float val = 1.0 - sm(gt, gt + 2.0, len, .25);
         // TODO: smでバラバラ感を制御しているが思った挙動じゃないので調査する
         vec2 res = distGlow(p + h * 0.15 * val);
-        col += max(vec3(0.0), 0.001 / res.x) * rgb2hsv(vec3(p.x * 1., 0.8, 1.));
+        col += max(vec3(0.0), 0.002 / res.x) * rgb2hsv(vec3(p.x * 1., 0.8, 1.0));
         t += res.x;
         if (maxDepth < t) {
             break;
@@ -416,7 +424,7 @@ vec3 scene(vec2 p)
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
     } else if (beat < 6000.0) {
         initBeat(-16.0);
-        fogInit(vec3(0.1, 0.2, 0.4) * 80.0);
+        fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((sceneBeat - 2.0) * 0.5))));
         stageEdgeOnly(0.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + sceneBeat * 0.25));
         cameraInit(p, vec3(.75 + sin(sceneBeat * 0.2) * 0.15, .8 + cos(sceneBeat * 0.4) * 0.05, sin(sceneBeat*0.15) * 0.05 + sceneBeat * 0.25),
@@ -424,7 +432,7 @@ vec3 scene(vec2 p)
                     sin(sceneBeat * 0.5) * 0.1,
                     1.0);
         initLight(vec3(0.01), vec3(0.2, 0.4, 0.8));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 1.0, 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5), 8.0);
+        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, 1.0, saturate((sceneBeat - 2.0) * 0.5)), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5), 8.0);
     }
     stageInit();
     vec4 c = trace(ro, ray);
