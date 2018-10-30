@@ -9,7 +9,7 @@
 const int Iterations = 3;
 
 float time;
-float beat, kick, hihat, snare;
+float beat, sceneBeat, kick, hihat, snare;
 float stageScale, bloomStage, bloomTraveler, bloomStageScale, bloomTravelerScale;
 float edgeOnly;
 vec3 fogColor;
@@ -331,19 +331,14 @@ vec4 trace(vec3 ro, vec3 ray)
     return vec4(materialize(ro, ray, t, res), t);
 }
 
-void initTime(float t)
+void initBeat(float offset)
 {
-    time = t;
-}
+    sceneBeat = (time + offset) * 120.0 / 60.0;
+    //beat = mod(beat, 64.0)
 
-void initBeat(float t)
-{
-    beat = t * 120.0 / 60.0;
-    //beat = mod(beat, 64.0);
-
-    kick = mod(beat,1.);
-    hihat = beat < 16.0 ? 0.0 : pingPong(beat + 0.5, 1.0, 0.1) * 0.1;
-    snare = beat < 32.0 ? 0.0 : stepUp(beat - 32.5, 2.0, 0.5);
+    kick = mod(sceneBeat, 1.);
+    hihat = sceneBeat < 16.0 ? 0.0 : pingPong(sceneBeat + 0.5, 1.0, 0.1) * 0.1;
+    snare = sceneBeat < 32.0 ? 0.0 : stepUp(sceneBeat - 32.5, 2.0, 0.5);
 }
 
 void stageInit()
@@ -393,31 +388,30 @@ vec2 hash( vec2 p ){
 
 vec3 scene(vec2 p)
 {
-    float t = iTime;
-    if (t < 10.0) {
-        initTime(t);
-        initBeat(52.75);
+    time = iTime;
+    beat = time * 120.0 / 60.0;
+    if (beat < 16.0) {
+        initBeat(0.0);
         fogInit(vec3(0.0));
         stageEdgeOnly(1.0);
-        travelerInit(vec3(0.75, 0.75, mix(-20.0, 20.0, time / 10.0)));
+        travelerInit(vec3(0.75, 0.75, mix(-20.0, 20.0, sceneBeat / 16.0)));
         vec3 cameraPos = vec3(0.9, 0.8, 0.0);
-        vec2 rnd = hash(vec2(time)) * 0.05 * max(0.0, 1.0 - distance(cameraPos, sp) / 5.0);
+        vec2 rnd = hash(vec2(sceneBeat * 0.5)) * 0.05 * max(0.0, 1.0 - distance(cameraPos, sp) / 5.0);
         cameraPos.xy += rnd;
         cameraInit(p, cameraPos,
                     vec3(vec2(0.75, 0.75) + rnd, 1.0),
                     0.0,
                     3.0);
-        bloomInit(0.0, 1.0, max(0.2, cos(time) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
-    } else if (t < 6000.0) {
-        initTime(t - 10.0);
-        initBeat(time);
+        bloomInit(0.0, 1.0, max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
+    } else if (beat < 6000.0) {
+        initBeat(-10.0);
         fogInit(vec3(0.1, 0.2, 0.4) * 80.0);
         stageEdgeOnly(0.0);
-        bloomInit(1.0, 8.0, max(0.2, cos(time) * 0.5 + 0.5), 8.0);
-        travelerInit(vec3(0.75, 0.75, 0.2 + time * 0.5));
-        cameraInit(p, vec3(.75 + sin(time * 0.4) * 0.15, .8 + cos(time * 0.8) * 0.05, sin(time*0.3) * 0.05 + time * 0.5), 
-                    vec3(0.75, 0.75,  (sin(time * 0.1) * 0.5 + 0.5) * 3.0 + 0.2 + time * 0.5),
-                    sin(time) * 0.1,
+        bloomInit(1.0, 8.0, max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5), 8.0);
+        travelerInit(vec3(0.75, 0.75, 0.2 + sceneBeat * 0.25));
+        cameraInit(p, vec3(.75 + sin(sceneBeat * 0.2) * 0.15, .8 + cos(sceneBeat * 0.4) * 0.05, sin(sceneBeat*0.15) * 0.05 + sceneBeat * 0.25),
+                    vec3(0.75, 0.75,  (sin(sceneBeat * 0.05) * 0.5 + 0.5) * 3.0 + 0.2 + sceneBeat * 0.25),
+                    sin(sceneBeat * 0.5) * 0.1,
                     1.0);
     }
     stageInit();
