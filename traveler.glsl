@@ -55,18 +55,23 @@ float pingPong(float t, float len, float smo)
 
 float glowTime(vec3 p)
 {
-    float t = beat - 16.0;
+    float t = beat - 48.0;
+    if (t < 0.0) {
+        return -1.0;
+    }
+    t -= 1.0;
     float len = distance(sp, p);
     float tt = mod(t, 8.) + floor(len / 8.0) * 8.0;
-    return mix(-1.0, mix(t, tt, step(10.0, t)), step(0., t));
+    return tt;
 }
 
 float patternIntensity(vec3 p)
 {
-    float t = beat - 16.0;
+    float t = beat - 32.0;
     if (t < 0.0) {
         return 0.0;
     }
+    t -= 1.0;
     float len = distance(sp, p);
     return sm(0.0, 2., mod(len - t * 1.5, 6.0), .5);
 }
@@ -342,9 +347,9 @@ vec4 trace(vec3 ro, vec3 ray)
     return vec4(materialize(ro, ray, t, res), t);
 }
 
-void initBeat(float offset)
+void initBeat(float b, float offset)
 {
-    sceneBeat = beat + offset;
+    sceneBeat = b + offset;
 
     kick = mod(sceneBeat, 1.);
     hihat = sceneBeat < 16.0 ? 0.0 : pingPong(sceneBeat + 0.5, 1.0, 0.1) * 0.1;
@@ -409,7 +414,7 @@ vec3 scene(vec2 p)
     time = iTime;
     beat = time * 120.0 / 60.0;
     if (beat < 16.0) {
-        initBeat(0.0);
+        initBeat(beat, 0.0);
         fogInit(vec3(0.0));
         stageEdgeOnly(1.0);
         travelerInit(vec3(0.75, 0.75, mix(-20.0, 20.0, sceneBeat / 16.0)));
@@ -423,18 +428,19 @@ vec3 scene(vec2 p)
         initLight(vec3(0.01), vec3(0.0));
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
     } else if (beat < 48.0) {
-        initBeat(-16.0);
+        initBeat(0.0, 0.0);
         fogInit(vec3(0.0));
         stageEdgeOnly(1.0);
-        travelerInit(vec3(0.75, 0.75, 0.2 + sceneBeat * 0.25));
-        cameraInit(p, sp + vec3(cos(sceneBeat * 0.5) * 0.3, .15, sin(sceneBeat * 0.5) * 0.3),
+        travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
+        float val = sin(beat * 0.25);
+        cameraInit(p, sp + vec3(sin(beat * 0.5) * 0.3 + val * 0.05, .15 + val * 0.05, cos(beat * 0.5) * 0.3 + val * 0.05),
                     sp,
-                    0.0,
+                    val * 0.1,
                     2.5);
         initLight(vec3(0.01), vec3(0.0));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
+        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
     } else if (beat < 6000.0) {
-        initBeat(-48.0);
+        initBeat(beat, -48.0);
         fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((sceneBeat - 2.0) * 0.5))));
         stageEdgeOnly(0.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + sceneBeat * 0.25));
