@@ -5,6 +5,7 @@
 #define MAT_WING  1.0
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
+
 #define saturate(x) (clamp(x, 0.0, 1.0))
 
 const int Iterations = 3;
@@ -55,11 +56,20 @@ float pingPong(float t, float len, float smo)
 
 float glowTime(vec3 p)
 {
-    float t = beat - 48.0;
-    if (t < 0.0) {
+    float t = beat;
+    if (t < 44.0) {
+        return -1.0;
+    } else if (t > 52.0 && t < 108.0) {
         return -1.0;
     }
-    t -= 1.0;
+    if (t > 52.0) {
+        t -= 52.0;
+        t -= 1.0;
+    } else if (t > 44.0) {
+        t -= 44.0;
+        t -= 1.0;
+    }
+
     float len = distance(sp, p);
     float tt = mod(t, 8.) + floor(len / 8.0) * 8.0;
     return tt;
@@ -67,11 +77,11 @@ float glowTime(vec3 p)
 
 float patternIntensity(vec3 p)
 {
-    float t = beat - 32.0;
+    float t = beat - 28.0;
     if (t < 0.0) {
         return 0.0;
     }
-    t -= 1.0;
+    t -= 2.0;
     float len = distance(sp, p);
     return sm(0.0, 2., mod(len - t * 1.5, 6.0), .5);
 }
@@ -96,14 +106,18 @@ float de(vec3 p, mat3 rot, float scale) {
         p*=rot;
         p = abs(p);
 
-        if (beat < 48.0) {
+        if (beat < 44.0) {
             if (p.x < p.y) {p.yx = p.xy;}
             if (p.x < p.z) {p.xz = p.zx;}
             if (p.y < p.z) {p.yz = p.zy;}
+        } else if (beat < 108.0) {
+            if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(sceneBeat, 64.0 * 0.5, 1.0));}
+            if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(sceneBeat, 64.0, 1.0));}
+            if (p.y < p.z) {p.yz = mix(p.zy, p.yz, mix(pingPong(sceneBeat, 64.0 * 0.25, 1.0), 1.0, saturate(beat - 107.0)));}
         } else {
-            if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(sceneBeat, 63.5 * 0.5, 1.0));}
-            if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(sceneBeat, 63.5, 1.0));}
-            if (p.y < p.z) {p.yz = mix(p.zy, p.yz, pingPong(sceneBeat, 63.5 * 0.25, 1.0));}
+            if (p.x < p.y) {p.yx = p.xy;}
+            //if (p.x < p.z) {p.xz = p.zx;}
+            //if (p.y < p.z) {p.yz = p.zy;}
         }
 
         p.z -= 0.5*offset.z*(scale-1.)/scale;
@@ -276,10 +290,10 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 pattern = 19.3602379925 * spLocalNormal;
         float emission = min(1.0,  tex(pattern.zy, 113.09) + tex(pattern.xz, 113.09) + tex(pattern.xy, 113.09));
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 10.);
-        col += vec3(1.0, 0.25, 0.35) * 2. * emission * (cos(sceneBeat * 0.5) * 0.5 + 0.5 + 0.2);
+        col += vec3(1.0, 0.25, 0.35) * 2. * emission * (cos(beat * 0.5) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_BODY) {
         col += shade(pos, nor, ray, vec3(.25), vec3(.15), 5.);
-        col += vec3(1.0, 0.25, 0.35) * 2. * (cos(sceneBeat * 0.5) * 0.5 + 0.5 + 0.2);
+        col += vec3(1.0, 0.25, 0.35) * 2. * (cos(beat * 0.5) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_STAGE) {
         vec3 n = pos * 9.3602379925;
         float edge = tex2(n.zy, 113.09) + tex2(n.xz, 113.09) + tex2(n.xy, 113.09);
@@ -289,7 +303,7 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
 
         // ステージが出現する演出
         float noShade = 0.0;
-        if (beat > 16.0) {
+        if (beat > 45.0) {
             noShade = step(distance(pos, sp), sceneBeat);
         }
 
@@ -341,21 +355,27 @@ vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
 vec4 trace(vec3 ro, vec3 ray)
 {
     float t = 0.0;
+    float stepIntensity = 0.0;
     vec2 res;
     for (int i = 0; i < 64; i++) {
         vec3 p = ro+ray*t;
         res = distAll(p);
         if( res.x < 0.0001 ) {
+            stepIntensity = float(i) / 64.0;
             break;
         }
         t += res.x;
     }
-    return vec4(materialize(ro, ray, t, res), t);
+    vec3 p = ro + ray * t;
+    float val = patternIntensity(p);
+    vec3 sg1 = pow(stepIntensity * 1.0, 5.0) * vec3(.2, .4, .8) * val * 20.0;
+    //vec3 sg2 = pow(stepIntensity * 1.0, 2.0) * vec3(1., 0., 0.) * ((sin(sceneBeat) + 1.0) * 0.5);
+    return vec4(materialize(ro, ray, t, res) + sg1, t);
 }
 
-void initBeat(float offset)
+void initBeat(float b)
 {
-    sceneBeat = beat + offset;
+    sceneBeat = b;
 
     kick = mod(sceneBeat, 1.);
     hihat = sceneBeat < 16.0 ? 0.0 : pingPong(sceneBeat + 0.5, 1.0, 0.1) * 0.1;
@@ -368,7 +388,7 @@ void stageInit()
     stageRot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
     vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
     stageRot2 = rotateMat(angle.x, angle.y, angle.z);
-    sphereRot = rotateMat(sin(time),cos(time), sin(time * .33));
+    sphereRot = rotateMat(sin(beat * 0.5),cos(beat * 0.5), sin(beat * 0.5 * .33));
 }
 
 void travelerInit(vec3 p)
@@ -415,12 +435,29 @@ vec2 hash( vec2 p ){
     return fract(sin(p)*43758.5453) * 2.0 - 1.0;
 }
 
+float quadraticInOut(float t) {
+  float p = 2.0 * t * t;
+  return t < 0.5 ? p : -p + (4.0 * t) - 1.0;
+}
+
 vec3 scene(vec2 p)
 {
     time = iTime;
     beat = time * 120.0 / 60.0;
-    if (beat < 16.0) {
-        initBeat(0.0);
+
+
+    float val = sin(beat * 0.25);
+    float scene0Beat = beat;
+    float scene1Beat = beat - 12.;
+    float scene2Beat = beat - 44.;
+    vec3 scene1CameraPos = vec3(sin(scene1Beat * 0.5) * 0.3 + val * 0.05, .15 + val * 0.05, cos(scene1Beat * 0.5) * 0.3 + val * 0.05);
+    vec3 scene2CameraPos = vec3(sin(scene2Beat * 0.2) * 0.15, cos(scene2Beat * 0.4) * 0.05 + 0.05, cos(scene2Beat * 0.15 + PI) * 0.05 - 0.2);
+
+    vec3 scene1CameraTarget = vec3(0.);
+    vec3 scene2CameraTarget = vec3(0.0, 0.0, (sin(scene2Beat * 0.05) * 0.5 + 0.5) * 3.0);
+
+    if (beat < 12.0) {
+        initBeat(scene0Beat);
         fogInit(vec3(0.0));
         stageEdgeOnly(1.0);
         travelerInit(vec3(0.75, 0.75, mix(-20.0, 20.0, sceneBeat / 16.0)));
@@ -433,29 +470,29 @@ vec3 scene(vec2 p)
                     3.0);
         initLight(vec3(0.01), vec3(0.0));
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
-    } else if (beat < 48.0) {
-        initBeat(-16.0);
+    } else if (beat < 44.0) {
+        initBeat(scene1Beat);
         fogInit(vec3(0.0));
         stageEdgeOnly(1.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
-        float val = sin(beat * 0.25);
-        cameraInit(p, sp + vec3(sin(sceneBeat * 0.5) * 0.3 + val * 0.05, .15 + val * 0.05, cos(sceneBeat * 0.5) * 0.3 + val * 0.05),
-                    sp,
-                    val * 0.1,
-                    2.5);
+        float animVal = saturate(beat - 43.0);
+        cameraInit(p, mix(sp + scene1CameraPos, sp + scene2CameraPos, quadraticInOut(animVal)),
+                    mix(sp + scene1CameraTarget, sp + scene2CameraTarget, quadraticInOut(animVal * animVal)),
+                    mix(val * 0.1, sin(scene2Beat * 0.5) * 0.1, quadraticInOut(animVal)),
+                    mix(2.5, 1., quadraticInOut(animVal * animVal)));
         initLight(vec3(0.01), vec3(0.0));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
+        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
     } else if (beat < 6000.0) {
-        initBeat(-48.0);
+        initBeat(scene2Beat);
         fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((sceneBeat - 2.0) * 0.5))));
         stageEdgeOnly(0.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
-        cameraInit(p, sp + vec3(sin(sceneBeat * 0.2) * 0.15, cos(sceneBeat * 0.4) * 0.05 + 0.05, sin(sceneBeat*0.15) * 0.05 - 0.2),
-                    sp + vec3(0.0, 0.0, (sin(sceneBeat * 0.05) * 0.5 + 0.5) * 3.0),
+        cameraInit(p, sp + scene2CameraPos,
+                    sp + scene2CameraTarget,
                     sin(sceneBeat * 0.5) * 0.1,
                     1.0);
         initLight(vec3(0.01), vec3(0.2, 0.4, 0.8));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, 1.0, saturate((sceneBeat - 2.0) * 0.5)), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5), 8.0);
+        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, 1.0, saturate((sceneBeat - 2.0) * 0.5)), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
     }
     stageInit();
     vec4 c = trace(ro, ray);
