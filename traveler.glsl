@@ -412,8 +412,8 @@ vec4 particleTrace(vec3 ro, vec3 ray, float maxDepth)
 	for (int i = 0; i < 32; i++)
 	{
         vec3 p = ro+ray*t;
-		float d = distSphereParticle(p);
-		col += max(vec3(0.0), 0.0001 / d * vec3(1.0, 0.5, 0.5));
+        float d = distSphereParticle(p);
+        col += max(vec3(0.0), 0.0001 / d * vec3(1.0, 0.5, 0.5));
         t += d * 0.5;
         if (maxDepth < t) {
             break;
@@ -429,8 +429,8 @@ vec4 particle2Trace(vec3 ro, vec3 ray, float maxDepth)
 	for (int i = 0; i < 32; i++)
 	{
         vec3 p = ro+ray*t;
-		float d = distCubeParticle(p);
-		col += max(vec3(0.0), 0.0007 / d * vec3(0.0, 0.5, 1.0));
+        float d = distCubeParticle(p);
+        col += max(vec3(0.0), 0.0007 / d * vec3(0.0, 0.5, 1.0));
         t += d * 0.25;
         if (maxDepth < t) {
             break;
