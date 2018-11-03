@@ -28,6 +28,11 @@ float sm(float start, float end, float t, float smo)
     return smoothstep(start, start + smo, t) - smoothstep(end - smo, end, t);
 }
 
+vec3 hash3( vec3 p ){
+    vec3 q = vec3(dot(p,vec3(127.1,311.7, 114.5)), dot(p,vec3(269.5,183.3, 191.9)), dot(p,vec3(419.2,371.9, 514.1)));
+    return fract(sin(q)*43758.5453);
+}
+
 mat3 rotateMat(float roll, float pitch, float yaw)
 {
     float cp = cos(pitch);
@@ -188,6 +193,35 @@ vec2 distGlow(vec3 p)
     return st;
 }
 
+float distCubeParticle(vec3 pos)
+{
+    pos.y -= beat * 0.25;
+    vec3 id = floor(pos / 1.);
+    pos = mod(pos, 1.) - 0.5;
+    vec3 rnd = hash3(id) * 2.0 - 1.0;
+    mat3 rot = rotateMat(rnd.x * beat * 2.0, rnd.y * beat * 2.0, rnd.z * beat * 2.0);
+    float d = sdBox((pos + rnd * 0.25) * rot, vec3(.025));
+    if (rnd.x < -0.5) {
+        d = .5;
+    }
+    return d;
+}
+
+float distSphereParticle(vec3 pos)
+{
+    pos.y -= beat * 0.35;
+    vec3 id = floor(pos / 0.4);
+    pos = mod(pos, 0.4) - 0.2;
+    vec3 rnd = hash3(id) * 2.0 - 1.0;
+    mat3 rot = rotateMat(rnd.x * beat * 2.0, rnd.y * beat * 2.0, rnd.z * beat * 2.0);
+    float d = sphere((pos * rot + rnd * 0.1), 0.005);
+    if (rnd.x < 0.0) {
+        d = 0.1;
+    }
+    return d;
+}
+
+/*
 vec3 normal(vec3 pos, float e)
 {
     vec3 eps = vec3(e,0.0,0.0);
@@ -196,6 +230,24 @@ vec3 normal(vec3 pos, float e)
            distAll(pos+eps.xyy).x - distAll(pos-eps.xyy).x,
            distAll(pos+eps.yxy).x - distAll(pos-eps.yxy).x,
            distAll(pos+eps.yyx).x - distAll(pos-eps.yyx).x ) );
+}
+*/
+
+vec3 normal( in vec3 pos, float eps )
+{
+    vec2 e = vec2(1.0,-1.0)*0.5773*eps;
+    return normalize( e.xyy*distAll( pos + e.xyy ).x +
+					  e.yyx*distAll( pos + e.yyx ).x +
+					  e.yxy*distAll( pos + e.yxy ).x +
+					  e.xxx*distAll( pos + e.xxx ).x );
+    /*
+	vec3 eps = vec3( 0.0005, 0.0, 0.0 );
+	vec3 nor = vec3(
+	    map(pos+eps.xyy).x - map(pos-eps.xyy).x,
+	    map(pos+eps.yxy).x - map(pos-eps.yxy).x,
+	    map(pos+eps.yyx).x - map(pos-eps.yyx).x );
+	return normalize(nor);
+	*/
 }
 
 mat3 createCamera(vec3 ro, vec3 ta, float cr )
@@ -325,11 +377,6 @@ vec3 rgb2hsv(vec3 hsv)
 	return hsv.z * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), hsv.y);
 }
 
-vec3 hash3( vec3 p ){
-    vec3 q = vec3(dot(p,vec3(127.1,311.7, 114.5)), dot(p,vec3(269.5,183.3, 191.9)), dot(p,vec3(419.2,371.9, 514.1)));
-    return fract(sin(q)*43758.5453);
-}
-
 vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
 {
     float t = 0.0;
@@ -357,12 +404,47 @@ vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
     return col;
 }
 
+
+vec4 particleTrace(vec3 ro, vec3 ray, float maxDepth)
+{
+    float t = 0.0;
+    vec3 col = vec3(0.0);
+	for (int i = 0; i < 32; i++)
+	{
+        vec3 p = ro+ray*t;
+		float d = distSphereParticle(p);
+		col += max(vec3(0.0), 0.0001 / d * vec3(1.0, 0.5, 0.5));
+        t += d * 0.5;
+        if (maxDepth < t) {
+            break;
+        }
+	}
+	return vec4(col, t);
+}
+
+vec4 particle2Trace(vec3 ro, vec3 ray, float maxDepth)
+{
+    float t = 0.0;
+    vec3 col = vec3(0.0);
+	for (int i = 0; i < 32; i++)
+	{
+        vec3 p = ro+ray*t;
+		float d = distCubeParticle(p);
+		col += max(vec3(0.0), 0.0007 / d * vec3(0.0, 0.5, 1.0));
+        t += d * 0.25;
+        if (maxDepth < t) {
+            break;
+        }
+	}
+	return vec4(col, t);
+}
+
 vec4 trace(vec3 ro, vec3 ray)
 {
     float t = 0.0;
     float stepIntensity = 0.0;
     vec2 res;
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < 48; i++) {
         vec3 p = ro+ray*t;
         res = distAll(p);
         if( res.x < 0.0001 ) {
@@ -508,14 +590,12 @@ vec3 scene(vec2 p)
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, 1.0, saturate((sceneBeat - 2.0) * 0.5)), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
     } else if (beat < 6000.0) {
         initBeat(scene2Beat);
-
         stageEdgeOnly(0.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
         cameraInit(p, sp + scene3CameraPos,
                     sp + scene3CameraTarget,
                     cameraF * 0.1,
                     3.5);
-
         float animIntensity = saturate((beat - 140.0) / 4.0 );
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(1.0, 0.0, animIntensity), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
         shadeIntensity = mix(1.0, 0.0, animIntensity);
@@ -526,6 +606,10 @@ vec3 scene(vec2 p)
     stageInit();
     vec4 c = trace(ro, ray);
     c.rgb += glowTrace(ro, ray, c.w + 0.01) * glowIntensity;
+    vec4 p1 = particleTrace(ro, ray, c.w);
+    vec4 p2 = particle2Trace(ro, ray, c.w);
+    c.rgb += p1.rgb;
+    c.rgb = mix(c.rgb + p2.rgb, mix(p2.rgb, fogColor, pow(p2.w * 0.04, 2.1)), saturate(p2.g));
     return c.rgb;
 }
 
