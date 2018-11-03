@@ -21,7 +21,7 @@ vec3 ro, ta, sp;
 vec3 cameraLight, stageLight;
 vec3 stageFlareCol, travelerFlareCol;
 float stageFlareIntensity, travelerFlareIntensity, stageFlareExp, travelerFlareExp;
-float shadeIntensity, glowIntensity;
+float shadeIntensity, glowIntensity, particleIntensity;
 
 float sm(float start, float end, float t, float smo)
 {
@@ -540,7 +540,7 @@ vec3 scene(vec2 p)
 
     vec3 scene1CameraPos = vec3(sin(scene1Beat * 0.5) * 0.3 + cameraF * 0.05, .15 + cameraF * 0.05, cos(scene1Beat * 0.5) * 0.3 + cameraF * 0.05);
     vec3 scene2CameraPos = vec3(sin(scene2Beat * 0.2) * 0.15, cos(scene2Beat * 0.4) * 0.05 + 0.05, cos(scene2Beat * 0.15 + PI) * 0.05 - 0.2);
-    vec3 scene3CameraPos = vec3(sin(scene1Beat * 0.25) * 0.5 + cameraF * 0.05, .15 + cameraF * 0.05, cos(scene1Beat * 0.25) * 0.5 + cameraF * 0.05);
+    vec3 scene3CameraPos = vec3(cos(scene1Beat * 0.25) * 0.7 + cameraF * 0.05, .15 + cameraF * 0.05, sin(scene1Beat * 0.25) * 0.5 + cameraF * 0.05);
 
     vec3 scene1CameraTarget = vec3(0.);
     vec3 scene2CameraTarget = vec3(0.0, 0.0, (sin(scene2Beat * 0.05) * 0.5 + 0.5) * 3.0);
@@ -548,6 +548,7 @@ vec3 scene(vec2 p)
 
     shadeIntensity = 1.0;
     glowIntensity = 1.0;
+    particleIntensity = 0.0;
 
     if (beat < 12.0) {
         initBeat(scene0Beat);
@@ -596,20 +597,22 @@ vec3 scene(vec2 p)
                     sp + scene3CameraTarget,
                     cameraF * 0.1,
                     3.5);
-        float animIntensity = saturate((beat - 140.0) / 4.0 );
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(1.0, 0.0, animIntensity), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
-        shadeIntensity = mix(1.0, 0.0, animIntensity);
-        glowIntensity = mix(1.0, 0.0, animIntensity);
-        fogInit(mix(vec3(0.1, 0.2, 0.4) * 80.0, vec3(0.0), animIntensity));
-        initLight(vec3(0.01), mix(vec3(0.2, 0.4, 0.8), vec3(0.0), animIntensity));
+        float animVal = saturate((beat - 140.0) / 4.0 );
+        float particleAnim = saturate((beat - 145.0) / 4.0 );
+        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(1.0, 0.0, animVal), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
+        shadeIntensity = mix(1.0, 0.0, animVal);
+        glowIntensity = mix(1.0, 0.0, animVal);
+        particleIntensity = mix(0.0, 1.0, particleAnim);
+        fogInit(mix(vec3(0.1, 0.2, 0.4) * 80.0, vec3(0.0), animVal));
+        initLight(vec3(0.01), mix(vec3(0.2, 0.4, 0.8), vec3(0.0), animVal));
     }
     stageInit();
     vec4 c = trace(ro, ray);
     c.rgb += glowTrace(ro, ray, c.w + 0.01) * glowIntensity;
     vec4 p1 = particleTrace(ro, ray, c.w);
     vec4 p2 = particle2Trace(ro, ray, c.w);
-    c.rgb += p1.rgb;
-    c.rgb = mix(c.rgb + p2.rgb, mix(p2.rgb, fogColor, pow(p2.w * 0.04, 2.1)), saturate(p2.g));
+    c.rgb += p1.rgb * particleIntensity;
+    c.rgb = mix(c.rgb + p2.rgb * particleIntensity, mix(p2.rgb, fogColor, pow(p2.w * 0.04, 2.1)), saturate(p2.g) * particleIntensity);
     return c.rgb;
 }
 
