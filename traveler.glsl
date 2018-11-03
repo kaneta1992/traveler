@@ -21,6 +21,7 @@ vec3 ro, ta, sp;
 vec3 cameraLight, stageLight;
 vec3 stageFlareCol, travelerFlareCol;
 float stageFlareIntensity, travelerFlareIntensity, stageFlareExp, travelerFlareExp;
+float shadeIntensity, glowIntensity;
 
 float sm(float start, float end, float t, float smo)
 {
@@ -138,6 +139,10 @@ float de(vec3 p, mat3 rot, float scale) {
 vec2 distStage(vec3 p, mat3 rot, float scale)
 {
     float d = de(p, rot, scale);
+    if (beat > 144.0) {
+        // シーン3ではステージを表示しない
+        d = 100.0;
+    }
     return vec2(d, MAT_STAGE);
 }
 
@@ -307,7 +312,7 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
             noShade = step(distance(pos, sp), sceneBeat);
         }
 
-        col += shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly * noShade + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos);
+        col += (shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly * noShade + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
     }
 
     return mix(col, fogColor, pow(depth * 0.02, 2.1));
@@ -343,7 +348,7 @@ vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
         float val = 1.0 - sm(gt, gt + 2.0, len, .25);
         // TODO: smでバラバラ感を制御しているが思った挙動じゃないので調査する
         vec2 res = distGlow(p + h * 0.15 * val);
-        col += max(vec3(0.0), 0.002 / res.x) * rgb2hsv(vec3(p.x * 1., 0.8, 1.0));
+        col += saturate(0.002 / res.x) * rgb2hsv(vec3(p.x * 1., 0.8, 1.0));
         t += res.x;
         if (maxDepth < t) {
             break;
@@ -370,7 +375,7 @@ vec4 trace(vec3 ro, vec3 ray)
     float val = patternIntensity(p);
     vec3 sg1 = pow(stepIntensity * 1.0, 5.0) * vec3(.2, .4, .8) * val * 20.0;
     //vec3 sg2 = pow(stepIntensity * 1.0, 2.0) * vec3(1., 0., 0.) * ((sin(sceneBeat) + 1.0) * 0.5);
-    return vec4(materialize(ro, ray, t, res) + sg1, t);
+    return vec4(materialize(ro, ray, t, res) + sg1 * shadeIntensity, t);
 }
 
 void initBeat(float b)
@@ -459,6 +464,9 @@ vec3 scene(vec2 p)
     vec3 scene2CameraTarget = vec3(0.0, 0.0, (sin(scene2Beat * 0.05) * 0.5 + 0.5) * 3.0);
     vec3 scene3CameraTarget = vec3(0.);
 
+    shadeIntensity = 1.0;
+    glowIntensity = 1.0;
+
     if (beat < 12.0) {
         initBeat(scene0Beat);
         fogInit(vec3(0.0));
@@ -500,19 +508,24 @@ vec3 scene(vec2 p)
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, 1.0, saturate((sceneBeat - 2.0) * 0.5)), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
     } else if (beat < 6000.0) {
         initBeat(scene2Beat);
-        fogInit(vec3(0.1, 0.2, 0.4) * 80.0);
+
         stageEdgeOnly(0.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
         cameraInit(p, sp + scene3CameraPos,
                     sp + scene3CameraTarget,
                     cameraF * 0.1,
                     3.5);
-        initLight(vec3(0.01), vec3(0.2, 0.4, 0.8));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 1.0, 8.0, vec3(1.0, 0.25, 0.35), cos(beat * 0.5) * 0.5 + 0.5, 8.0);
+
+        float animIntensity = saturate((beat - 140.0) / 4.0 );
+        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(1.0, 0.0, animIntensity), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
+        shadeIntensity = mix(1.0, 0.0, animIntensity);
+        glowIntensity = mix(1.0, 0.0, animIntensity);
+        fogInit(mix(vec3(0.1, 0.2, 0.4) * 80.0, vec3(0.0), animIntensity));
+        initLight(vec3(0.01), mix(vec3(0.2, 0.4, 0.8), vec3(0.0), animIntensity));
     }
     stageInit();
     vec4 c = trace(ro, ray);
-    c.rgb += glowTrace(ro, ray, c.w + 0.01);
+    c.rgb += glowTrace(ro, ray, c.w + 0.01) * glowIntensity;
     return c.rgb;
 }
 
