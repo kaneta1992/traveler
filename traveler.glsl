@@ -22,6 +22,7 @@ vec3 cameraLight, stageLight;
 vec3 stageFlareCol, travelerFlareCol;
 float stageFlareIntensity, travelerFlareIntensity, stageFlareExp, travelerFlareExp;
 float shadeIntensity, glowIntensity, particleIntensity;
+float stageFold, stageRotateZ;
 
 float sm(float start, float end, float t, float smo)
 {
@@ -141,8 +142,25 @@ float de(vec3 p, mat3 rot, float scale) {
     return distance;
 }
 
+mat2 rotate(in float a) {
+    float s = sin(a), c = cos(a);
+    return mat2(c, s, -s, c);
+}
+
+// https://www.shadertoy.com/view/Mlf3Wj
+vec2 foldRotate(in vec2 p, in float s) {
+    float a = PI / s - atan(p.x, p.y);
+    float n = TAU / s;
+    a = floor(a / n) * n;
+    p *= rotate(a);
+    return p;
+}
+
 vec2 distStage(vec3 p, mat3 rot, float scale)
 {
+    p.xy = (p.xy - 0.75) * rotate(p.z * stageRotateZ) + 0.75;
+    p.xy = foldRotate(p.xy - 0.75, stageFold) + 0.75;
+    p = mod(p, 1.5) - 0.75;
     float d = de(p, rot, scale);
     if (beat > 144.0) {
         // シーン3ではステージを表示しない
@@ -170,18 +188,16 @@ vec2 distSphere(vec3 p)
 
 vec2 distAll(vec3 p)
 {
-    vec3 pp = mod(p, 1.5) - 0.75;
-    vec2 st1 = distStage(pp, stageRot, stageScale);
-    vec2 st2 = distStage(pp, stageRot2 * stageRot, stageScale);
+    vec2 st1 = distStage(p, stageRot, stageScale);
+    vec2 st2 = distStage(p, stageRot2 * stageRot, stageScale);
     vec2 sp = distSphere((p - sp) * sphereRot);
     return U(sp, U(st1, st2));
 }
 
 vec2 distGlow(vec3 p)
 {
-    vec3 pp = mod(p, 1.5) - 0.75;
-    vec2 st1 = distStage(pp, stageRot, stageScale);
-    vec2 st2 = distStage(pp, stageRot2 * stageRot, stageScale);
+    vec2 st1 = distStage(p, stageRot, stageScale);
+    vec2 st2 = distStage(p, stageRot2 * stageRot, stageScale);
 
     float gt = glowTime(p);
 
@@ -419,7 +435,7 @@ vec4 particleTrace(vec3 ro, vec3 ray, float maxDepth)
             break;
         }
 	}
-	return vec4(col, t);
+	return vec4(saturate(col), t);
 }
 
 vec4 particle2Trace(vec3 ro, vec3 ray, float maxDepth)
@@ -436,7 +452,7 @@ vec4 particle2Trace(vec3 ro, vec3 ray, float maxDepth)
             break;
         }
 	}
-	return vec4(col, t);
+	return vec4(saturate(col), t);
 }
 
 vec4 trace(vec3 ro, vec3 ray)
@@ -549,6 +565,8 @@ vec3 scene(vec2 p)
     shadeIntensity = 1.0;
     glowIntensity = 1.0;
     particleIntensity = 0.0;
+    stageFold = 1.0;
+    stageRotateZ = 0.0;
 
     if (beat < 12.0) {
         initBeat(scene0Beat);
