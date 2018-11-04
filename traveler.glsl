@@ -604,7 +604,7 @@ vec3 scene(vec2 p)
                     mix(1.0, 3.5, animVal));
         initLight(vec3(0.01), vec3(0.2, 0.4, 0.8));
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, 1.0, saturate((sceneBeat - 2.0) * 0.5)), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
-    } else if (beat < 6000.0) {
+    } else if (beat < 172.0) {
         initBeat(scene2Beat);
         stageEdgeOnly(0.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
@@ -620,6 +620,19 @@ vec3 scene(vec2 p)
         particleIntensity = mix(0.0, 1.0, particleAnim);
         fogInit(mix(vec3(0.1, 0.2, 0.4) * 80.0, vec3(0.0), animVal));
         initLight(vec3(0.01), mix(vec3(0.2, 0.4, 0.8), vec3(0.0), animVal));
+    } else {
+        // WIP scene4
+        initBeat(scene1Beat);
+        fogInit(vec3(0.0));
+        stageEdgeOnly(1.0);
+        travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
+        float animVal = saturate(beat - 43.0);
+        cameraInit(p, mix(sp + scene1CameraPos, sp + scene2CameraPos, quadraticInOut(animVal)),
+                    mix(sp + scene1CameraTarget, sp + scene2CameraTarget, quadraticInOut(animVal * animVal)),
+                    mix(cameraF * 0.1, sin(scene2Beat * 0.5) * 0.1, quadraticInOut(animVal)),
+                    mix(2.5, 1., quadraticInOut(animVal * animVal)));
+        initLight(vec3(0.01), vec3(0.0));
+        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
     }
     stageInit();
     vec4 c = trace(ro, ray);
