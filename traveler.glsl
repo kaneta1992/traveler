@@ -201,7 +201,7 @@ float distCubeParticle(vec3 pos)
     vec3 rnd = hash3(id) * 2.0 - 1.0;
     mat3 rot = rotateMat(rnd.x * beat * 2.0, rnd.y * beat * 2.0, rnd.z * beat * 2.0);
     float d = sdBox((pos + rnd * 0.25) * rot, vec3(.025));
-    if (rnd.x < -0.5) {
+    if (rnd.x < -0.7) {
         d = .5;
     }
     return d;
@@ -209,12 +209,12 @@ float distCubeParticle(vec3 pos)
 
 float distSphereParticle(vec3 pos)
 {
-    pos.y -= beat * 0.35;
+    pos.y -= beat * 0.4;
     vec3 id = floor(pos / 0.4);
     pos = mod(pos, 0.4) - 0.2;
     vec3 rnd = hash3(id) * 2.0 - 1.0;
     mat3 rot = rotateMat(rnd.x * beat * 2.0, rnd.y * beat * 2.0, rnd.z * beat * 2.0);
-    float d = sphere((pos * rot + rnd * 0.1), 0.005);
+    float d = sphere((pos * rot + rnd * 0.1), 0.01);
     if (rnd.x < 0.0) {
         d = 0.1;
     }
@@ -409,11 +409,11 @@ vec4 particleTrace(vec3 ro, vec3 ray, float maxDepth)
 {
     float t = 0.0;
     vec3 col = vec3(0.0);
-	for (int i = 0; i < 32; i++)
+	for (int i = 0; i < 48; i++)
 	{
         vec3 p = ro+ray*t;
         float d = distSphereParticle(p);
-        col += max(vec3(0.0), 0.0001 / d * vec3(1.0, 0.5, 0.5));
+        col += max(vec3(0.0), 0.00015 / d * vec3(1.0, 0.5, 0.5));
         t += d * 0.5;
         if (maxDepth < t) {
             break;
@@ -426,7 +426,7 @@ vec4 particle2Trace(vec3 ro, vec3 ray, float maxDepth)
 {
     float t = 0.0;
     vec3 col = vec3(0.0);
-	for (int i = 0; i < 32; i++)
+	for (int i = 0; i < 48; i++)
 	{
         vec3 p = ro+ray*t;
         float d = distCubeParticle(p);
@@ -664,7 +664,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec3 col =  scene(p);
     vec2 pp = fragCoord/iResolution.xy;
-    col *= 0.5 + 0.5*pow( 16.0*pp.x*pp.y*(1.0-pp.x)*(1.0-pp.y), 0.05 );
     col = postProcess(p, col);
-    fragColor = vec4(pow(col, vec3(1.0 / 2.2)), 1.0);
+    //col = vec3(1.0);
+    vec2 uv = fragCoord.xy / iResolution.xy;
+    uv *=  1.0 - uv.yx;
+    float vig = uv.x*uv.y * 200.0;
+    vig = pow(vig, 0.1) * 0.8;
+    fragColor = vec4(saturate(pow(col, vec3(1.0 / 2.2))) * vig, 1.0);
 }
