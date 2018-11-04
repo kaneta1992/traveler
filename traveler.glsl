@@ -118,6 +118,7 @@ float de(vec3 p, mat3 rot, float scale) {
             if (p.x < p.z) {p.xz = p.zx;}
             if (p.y < p.z) {p.yz = p.zy;}
         } else if (beat < 108.0 || beat > 172.0) {
+            // TODO: シーン4のタイミングとbeatが合わない場合はオフセット用意しよう
             if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(sceneBeat, 64.0 * 0.25, 1.0));}
             if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(sceneBeat, 64.0 * 0.75, 1.0));}
             if (p.y < p.z) {p.yz = mix(p.zy, p.yz, pingPong(mod(sceneBeat, 64.0 * 0.65) - step(64.0 * 0.75, sceneBeat) * 64.0 * 0.1, 64.0 * 0.25, 1.0));}
