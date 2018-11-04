@@ -117,16 +117,13 @@ float de(vec3 p, mat3 rot, float scale) {
             if (p.x < p.y) {p.yx = p.xy;}
             if (p.x < p.z) {p.xz = p.zx;}
             if (p.y < p.z) {p.yz = p.zy;}
-        } else if (beat < 108.0) {
-            if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(sceneBeat, 64.0 * 0.5, 1.0));}
-            if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(sceneBeat, 64.0, 1.0));}
-            if (p.y < p.z) {p.yz = mix(p.zy, p.yz, mix(pingPong(sceneBeat, 64.0 * 0.25, 1.0), 1.0, saturate(beat - 107.0)));}
+        } else if (beat < 108.0 || beat > 172.0) {
+            if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(sceneBeat, 64.0 * 0.25, 1.0));}
+            if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(sceneBeat, 64.0 * 0.75, 1.0));}
+            if (p.y < p.z) {p.yz = mix(p.zy, p.yz, pingPong(mod(sceneBeat, 64.0 * 0.65) - step(64.0 * 0.75, sceneBeat) * 64.0 * 0.1, 64.0 * 0.25, 1.0));}
         } else {
             if (p.x < p.y) {p.yx = p.xy;}
-            //if (p.x < p.z) {p.xz = p.zx;}
-            //if (p.y < p.z) {p.yz = p.zy;}
         }
-
         p.z -= 0.5*offset.z*(scale-1.)/scale;
         p.z = -abs(-p.z);
         p.z += 0.5*offset.z*(scale-1.)/scale;
