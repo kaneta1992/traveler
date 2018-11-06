@@ -375,10 +375,10 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
         vec3 pattern = 19.3602379925 * spLocalNormal;
         float emission = min(1.0,  tex(pattern.zy, 113.09) + tex(pattern.xz, 113.09) + tex(pattern.xy, 113.09));
-        col += shade(pos, nor, ray, vec3(.05), vec3(.05), 10.);
+        //col += shade(pos, nor, ray, vec3(.05), vec3(.05), 10.);
         col += vec3(1.0, 0.25, 0.35) * 2. * emission * (cos(beat * 0.5) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_BODY) {
-        col += shade(pos, nor, ray, vec3(.05), vec3(.05), 5.);
+        //col += shade(pos, nor, ray, vec3(.05), vec3(.05), 5.);
         col += vec3(1.0, 0.25, 0.35) * 2. * (cos(beat * 0.5) * 0.5 + 0.5 + 0.2);
     } else if (mat.y == MAT_STAGE) {
         vec3 n = pos * 9.3602379925;
@@ -670,7 +670,7 @@ vec3 scene(vec2 p)
                     mix(sp + scene1CameraTarget, sp + scene2CameraTarget, quadraticInOut(animVal * animVal)),
                     mix(cameraF * 0.1, sin(scene2Beat * 0.5) * 0.1, quadraticInOut(animVal)),
                     mix(2.5, 0.65, quadraticInOut(animVal * animVal)));
-        initLight(vec3(0.01), vec3(0.2, 0.4, 0.8));
+        initLight(vec3(0.05), vec3(0.2, 0.4, 0.8) * 1.5);
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
         particleIntensity = 1.0;
         stageFold = stepUp(scene4Beat, 64. * 0.25, 1.0) * 4.0 + 5.0;
