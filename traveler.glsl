@@ -78,8 +78,11 @@ float glowTime(vec3 p)
         t -= 44.0;
         t -= 1.0;
     }
-    float len = distance(sp, p);
-    float tt = mod(t, 8.) + floor(len / 8.0) * 8.0;
+
+    float tt = mod(t, 8.);
+    if (beat > 172.0 && beat < 178.0) {
+        tt = beat - 172.0;
+    }
     return tt;
 }
 
@@ -164,10 +167,12 @@ vec2 distStage(vec3 p, mat3 rot, float scale)
     p.xy = foldRotate(p.xy - 0.75, stageFold) + 0.75;
     p = mod(p, 1.5) - 0.75;
     float d = de(p, rot, scale);
+
     if (beat > 144.0 && beat < 172.0) {
         // シーン3ではステージを表示しない
         d = 100.0;
     }
+
     return vec2(d, MAT_STAGE);
 }
 
@@ -192,8 +197,14 @@ vec2 distAll(vec3 p)
 {
     vec2 st1 = distStage(p, stageRot, stageScale);
     vec2 st2 = distStage(p, stageRot2 * stageRot, stageScale);
-    vec2 sp = distSphere((p - sp) * sphereRot);
-    return U(sp, U(st1, st2));
+    vec2 tr = distSphere((p - sp) * sphereRot);
+    if (beat > 172.0) {
+        if (distance(p, sp) > max(beat - 173.0, 0.0) * 1.7) {
+            st1.x = 100.0;
+            st2.x = 100.0;
+        }
+    }
+    return U(tr, U(st1, st2));
 }
 
 vec2 distGlow(vec3 p)
@@ -553,7 +564,7 @@ float elasticOut(float t) {
 vec3 scene(vec2 p)
 {
     time = iTime + 80.0;
-    beat = time * 120.0 / 60.0;
+    beat = time * 130.0 / 60.0;
 
     float cameraF = sin(beat * 0.25);
     float scene0Beat = beat;
@@ -651,14 +662,14 @@ vec3 scene(vec2 p)
     } else {
         // WIP scene4
         initBeat(scene1Beat);
-        fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((sceneBeat - 2.0) * 0.5))));
+        fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((scene4Beat - 8.0) * 0.5))));
         stageEdgeOnly(0.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
         float animVal = saturate(beat - 43.0);
         cameraInit(p, mix(sp + scene1CameraPos, sp + scene2CameraPos, quadraticInOut(animVal)),
                     mix(sp + scene1CameraTarget, sp + scene2CameraTarget, quadraticInOut(animVal * animVal)),
                     mix(cameraF * 0.1, sin(scene2Beat * 0.5) * 0.1, quadraticInOut(animVal)),
-                    mix(2.5, 1., quadraticInOut(animVal * animVal)));
+                    mix(2.5, 0.65, quadraticInOut(animVal * animVal)));
         initLight(vec3(0.01), vec3(0.2, 0.4, 0.8));
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
         particleIntensity = 1.0;
