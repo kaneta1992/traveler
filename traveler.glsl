@@ -122,9 +122,10 @@ float de(vec3 p, mat3 rot, float scale) {
         } else if (beat < 108.0 || beat > 172.0) {
             // TODO: シーン4のタイミングとbeatが合わない場合はオフセット用意しよう
             // 全->横->全->縦->前->縦->ループ
-            if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(sceneBeat, freq * 0.25, 1.0));}
-            if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(sceneBeat, freq * 0.75, 1.0));}
-            if (p.y < p.z) {p.yz = mix(p.zy, p.yz, saturate(pingPong(mod(sceneBeat, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(sceneBeat, freq*0.75))));}
+            float b = sceneBeat + step(172.0, beat) * 16.0;
+            if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(b, freq * 0.25, 1.0));}
+            if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(b, freq * 0.75, 1.0));}
+            if (p.y < p.z) {p.yz = mix(p.zy, p.yz, saturate(pingPong(mod(b, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(b, freq*0.75))));}
         } else {
             if (p.x < p.y) {p.yx = p.xy;}
         }
@@ -473,8 +474,9 @@ vec4 trace(vec3 ro, vec3 ray)
     vec3 p = ro + ray * t;
     float val = patternIntensity(p);
     vec3 sg1 = pow(stepIntensity * 1.0, 5.0) * vec3(.2, .4, .8) * val * 20.0;
-    //vec3 sg2 = pow(stepIntensity * 1.0, 2.0) * vec3(1., 0., 0.) * ((sin(sceneBeat) + 1.0) * 0.5);
-    return vec4(materialize(ro, ray, t, res) + sg1 * shadeIntensity, t);
+    vec3 sg2 = pow(stepIntensity * 1.0, 2.0) * vec3(1., 0., 0.);
+    vec3 sg3 = pow(stepIntensity * 1.0, 2.0) * vec3(0., 1., 1.);
+    return vec4(saturate(materialize(ro, ray, t, res) + sg1 * shadeIntensity/* + sg2 - sg3*/), t);
 }
 
 void initBeat(float b)
@@ -550,7 +552,7 @@ float elasticOut(float t) {
 
 vec3 scene(vec2 p)
 {
-    time = iTime + 20.0;
+    time = iTime + 80.0;
     beat = time * 120.0 / 60.0;
 
     float cameraF = sin(beat * 0.25);
@@ -558,6 +560,7 @@ vec3 scene(vec2 p)
     float scene1Beat = beat - 12.;
     float scene2Beat = beat - 44.;
     float scene3Beat = beat - 124.;
+    float scene4Beat = beat - 172.;
 
     vec3 scene1CameraPos = vec3(sin(scene1Beat * 0.475) * 0.3 + cameraF * 0.05, .15 + cameraF * 0.05, cos(scene1Beat * 0.475) * 0.3 + cameraF * 0.05);
     vec3 scene2CameraPos = vec3(sin(scene2Beat * 0.2) * 0.15, cos(scene2Beat * 0.4) * 0.05 + 0.05, cos(scene2Beat * 0.15 + PI) * 0.05 - 0.2);
@@ -659,8 +662,8 @@ vec3 scene(vec2 p)
         initLight(vec3(0.01), vec3(0.2, 0.4, 0.8));
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
         particleIntensity = 1.0;
-        stageFold = 10.0;
-        stageRotateZ = 0.0;
+        stageFold = stepUp(scene4Beat, 64. * 0.25, 1.0) * 4.0 + 5.0;
+        stageRotateZ = 1.0 - pingPong(scene4Beat, 64. * 0.25, 1.0);
     }
     stageInit();
     vec4 c = trace(ro, ray);
