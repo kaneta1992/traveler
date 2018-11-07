@@ -80,8 +80,8 @@ float glowTime(vec3 p)
     }
 
     float tt = mod(t, 8.);
-    if (beat > 172.0 && beat < 178.0) {
-        tt = beat - 172.0;
+    if (beat > 176.0 && beat < 182.0) {
+        tt = beat - 176.0;
     }
     return tt;
 }
@@ -122,10 +122,10 @@ float de(vec3 p, mat3 rot, float scale) {
             if (p.x < p.y) {p.yx = p.xy;}
             if (p.x < p.z) {p.xz = p.zx;}
             if (p.y < p.z) {p.yz = p.zy;}
-        } else if (beat < 108.0 || beat > 172.0) {
+        } else if (beat < 108.0 || beat > 176.0) {
             // TODO: シーン4のタイミングとbeatが合わない場合はオフセット用意しよう
             // 全->横->全->縦->前->縦->ループ
-            float b = sceneBeat + step(172.0, beat) * 16.0;
+            float b = sceneBeat + step(176.0, beat) * 12.0;
             if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(b, freq * 0.25, 1.0));}
             if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(b, freq * 0.75, 1.0));}
             if (p.y < p.z) {p.yz = mix(p.zy, p.yz, saturate(pingPong(mod(b, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(b, freq*0.75))));}
@@ -168,7 +168,7 @@ vec2 distStage(vec3 p, mat3 rot, float scale)
     p = mod(p, 1.5) - 0.75;
     float d = de(p, rot, scale);
 
-    if (beat > 144.0 && beat < 172.0) {
+    if (beat > 144.0 && beat < 176.0) {
         // シーン3ではステージを表示しない
         d = 100.0;
     }
@@ -198,7 +198,7 @@ vec2 distAll(vec3 p)
     vec2 st1 = distStage(p, stageRot, stageScale);
     vec2 st2 = distStage(p, stageRot2 * stageRot, stageScale);
     vec2 tr = distSphere((p - sp) * sphereRot);
-    if (beat > 172.0) {
+    if (beat > 176.0) {
         if (distance(p, sp) > max(beat - 173.0, 0.0) * 1.7) {
             st1.x = 100.0;
             st2.x = 100.0;
@@ -563,7 +563,7 @@ float elasticOut(float t) {
 
 vec3 scene(vec2 p)
 {
-    time = iTime + 0.0;
+    time = iTime + 60.0;
     beat = time * 130.0 / 60.0;
 
     float cameraF = sin(beat * 0.25);
@@ -571,11 +571,14 @@ vec3 scene(vec2 p)
     float scene1Beat = beat - 12.;
     float scene2Beat = beat - 44.;
     float scene3Beat = beat - 124.;
-    float scene4Beat = beat - 172.;
+    float scene4Beat = beat - 176.;
 
     vec3 scene1CameraPos = vec3(sin(scene1Beat * 0.475) * 0.3 + cameraF * 0.05, .15 + cameraF * 0.05, cos(scene1Beat * 0.475) * 0.3 + cameraF * 0.05);
     vec3 scene2CameraPos = vec3(sin(scene2Beat * 0.2) * 0.15, cos(scene2Beat * 0.4) * 0.05 + 0.05, cos(scene2Beat * 0.15 + PI) * 0.05 - 0.2);
     vec3 scene3CameraPos = vec3(cos(scene1Beat * 0.25) * 0.7 + cameraF * 0.05, .15 + cameraF * 0.05, sin(scene1Beat * 0.25) * 0.5 + cameraF * 0.05);
+
+    float cb = scene1Beat - 4.0;
+    vec3 scene4CameraPos = vec3(sin(cb * 0.2) * 0.15, cos(cb * 0.4) * 0.05 + 0.05, cos(cb * 0.15 + PI) * 0.05 - 0.2);
 
     vec3 scene1CameraTarget = vec3(0.);
     vec3 scene2CameraTarget = vec3(0.0, 0.0, (sin(scene2Beat * 0.05) * 0.5 + 0.5) * 3.0);
@@ -638,7 +641,7 @@ vec3 scene(vec2 p)
                     cfov);
         initLight(vec3(0.01), vec3(0.2, 0.4, 0.8));
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, 1.0, saturate((sceneBeat - 2.0) * 0.5)), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
-    } else if (beat < 172.0) {
+    } else if (beat < 176.0) {
         initBeat(scene2Beat);
         stageEdgeOnly(0.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
@@ -660,13 +663,12 @@ vec3 scene(vec2 p)
         fogInit(mix(vec3(0.1, 0.2, 0.4) * 80.0, vec3(0.0), animVal));
         initLight(vec3(0.01), mix(vec3(0.2, 0.4, 0.8), vec3(0.0), animVal));
     } else {
-        // WIP scene4
         initBeat(scene1Beat);
         fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((scene4Beat - 8.0) * 0.5))));
         stageEdgeOnly(0.0);
         travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
         float animVal = saturate(beat - 43.0);
-        cameraInit(p, mix(sp + scene1CameraPos, sp + scene2CameraPos, quadraticInOut(animVal)),
+        cameraInit(p, mix(sp + scene1CameraPos, sp + scene4CameraPos, quadraticInOut(animVal)),
                     mix(sp + scene1CameraTarget, sp + scene2CameraTarget, quadraticInOut(animVal * animVal)),
                     mix(cameraF * 0.1, sin(scene2Beat * 0.5) * 0.1, quadraticInOut(animVal)),
                     mix(2.5, 0.65, quadraticInOut(animVal * animVal)));
