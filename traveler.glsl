@@ -563,7 +563,7 @@ float elasticOut(float t) {
 
 vec3 scene(vec2 p)
 {
-    time = iTime + 80.0;
+    time = iTime + 0.0;
     beat = time * 130.0 / 60.0;
 
     float cameraF = sin(beat * 0.25);
@@ -670,8 +670,8 @@ vec3 scene(vec2 p)
                     mix(sp + scene1CameraTarget, sp + scene2CameraTarget, quadraticInOut(animVal * animVal)),
                     mix(cameraF * 0.1, sin(scene2Beat * 0.5) * 0.1, quadraticInOut(animVal)),
                     mix(2.5, 0.65, quadraticInOut(animVal * animVal)));
-        initLight(vec3(0.05), vec3(0.2, 0.4, 0.8) * 1.5);
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
+        initLight(vec3(0.05), vec3(0.2, 0.4, 0.8) * 2.5);
+        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 1.0, 4.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
         particleIntensity = 1.0;
         stageFold = stepUp(scene4Beat, 64. * 0.25, 1.0) * 4.0 + 5.0;
         stageRotateZ = 1.0 - pingPong(scene4Beat, 64. * 0.25, 1.0);
