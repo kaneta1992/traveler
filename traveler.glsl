@@ -27,6 +27,7 @@ float stageFlareIntensity, travelerFlareIntensity, stageFlareExp, travelerFlareE
 float shadeIntensity, glowIntensity, particleIntensity;
 float stageFold, stageRotateZ;
 float particle1Intensity, particle2Intensity;
+float travelerShade;
 
 float sm(float start, float end, float t, float smo)
 {
@@ -372,40 +373,6 @@ vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float s
     return col;
 }
 
-vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
-{
-    vec3 pos = ro + ray * depth;
-    vec3 nor = normal(pos, 0.0025);
-    vec3 col = vec3(0.);
-
-    if (mat.y == MAT_WING) {
-        vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
-        vec3 pattern = 19.3602379925 * spLocalNormal;
-        float emission = min(1.0,  tex(pattern.zy, 113.09) + tex(pattern.xz, 113.09) + tex(pattern.xy, 113.09));
-        //col += shade(pos, nor, ray, vec3(.05), vec3(.05), 10.);
-        col += vec3(1.0, 0.25, 0.35) * 1. * emission * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
-    } else if (mat.y == MAT_BODY) {
-        //col += shade(pos, nor, ray, vec3(.05), vec3(.05), 5.);
-        col += vec3(1.0, 0.25, 0.35) * 1. * saturate(cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
-    } else if (mat.y == MAT_STAGE) {
-        vec3 n = pos * 9.3602379925;
-        float edge = tex2(n.zy, 113.09) + tex2(n.xz, 113.09) + tex2(n.xy, 113.09);
-        vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
-        vec3 lvec = normalize(lpos - pos);
-        float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
-
-        // ステージが出現する演出
-        float noShade = 0.0;
-        if (beat > 45.0) {
-            noShade = step(distance(pos, sp), sceneBeat);
-        }
-
-        col += (shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly * noShade + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
-    }
-
-    return mix(col, fogColor, pow(depth * 0.02, 2.1));
-}
-
 vec3 rgb2hsv(vec3 hsv)
 {
 	vec4 t = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -473,6 +440,43 @@ vec4 particle2Trace(vec3 ro, vec3 ray, float maxDepth)
         }
 	}
 	return vec4(saturate(col), t);
+}
+
+vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
+{
+    vec3 pos = ro + ray * depth;
+    vec3 nor = normal(pos, 0.0025);
+    vec3 col = vec3(0.);
+
+    if (mat.y == MAT_WING) {
+        vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
+        vec3 pattern = 19.3602379925 * spLocalNormal;
+        float emission = min(1.0,  tex(pattern.zy, 113.09) + tex(pattern.xz, 113.09) + tex(pattern.xy, 113.09));
+        //col += shade(pos, nor, ray, vec3(.05), vec3(.05), 10.);
+        col += vec3(1.0, 0.25, 0.35) * 1. * emission * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
+    } else if (mat.y == MAT_BODY) {
+        //col += shade(pos, nor, ray, vec3(.05), vec3(.05), 5.);
+        vec3 ref = reflect(ray, nor);
+        vec3 tcol = vec3(1.0, 0.25, 0.35) * 1. * saturate(cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
+        vec3 particleRef = particleTrace(pos, ref, 100.0).rgb + particle2Trace(pos, ref, 100.0).rgb;
+        col += mix(tcol, particleRef, travelerShade);
+    } else if (mat.y == MAT_STAGE) {
+        vec3 n = pos * 9.3602379925;
+        float edge = tex2(n.zy, 113.09) + tex2(n.xz, 113.09) + tex2(n.xy, 113.09);
+        vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
+        vec3 lvec = normalize(lpos - pos);
+        float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
+
+        // ステージが出現する演出
+        float noShade = 0.0;
+        if (beat > 45.0) {
+            noShade = step(distance(pos, sp), sceneBeat);
+        }
+
+        col += (shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly * noShade + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
+    }
+
+    return mix(col, fogColor, pow(depth * 0.02, 2.1));
 }
 
 vec4 trace(vec3 ro, vec3 ray)
@@ -589,7 +593,7 @@ float exponentialOut(float t) {
 
 vec3 scene(vec2 p)
 {
-    time = iTime + 0.0;
+    time = iTime + 60.0;
     beat = time * BPM / 60.0;
 
     float cameraF = sin(beat * 0.25);
@@ -617,6 +621,7 @@ vec3 scene(vec2 p)
     stageRotateZ = 0.0;
     particle1Intensity = 0.0002;
     particle2Intensity = 0.0007;
+    travelerShade = 0.0;
 
     if (beat < 12.0) {
         initBeat(scene0Beat);
@@ -676,11 +681,15 @@ vec3 scene(vec2 p)
         float particleAnim = saturate((beat - 145.0) / 4.0 );
         float fovAnim = quadraticInOut(saturate((beat - 144.0) / 1.0));
         float fov = mix(3.5, 1.0, elasticOut(fovAnim));
-        fov = mix(fov, 3.5, exponentialInOut(saturate((beat - 148.0) / 12.0)));
+        float zoomAnim = exponentialInOut(saturate((beat - 148.0) / 12.0));
+        fov = mix(fov, 3.5, zoomAnim);
 
         particle1Intensity = mix(0.003, 0.0002, particleAnim);
         particle2Intensity = mix(0.016, 0.0007, particleAnim);
         particleIntensity = mix(0.0, 1.0, saturate((beat - 145.0) * 10.0));
+
+        float travelerAnim = exponentialInOut(saturate((beat - 156.0) / 4.0));
+        travelerShade = mix(0.0, 1.0, travelerAnim);
 
         float av2 = quadraticInOut(saturate((beat - 168.0) / 8.0));
         float av3 = exponentialOut(saturate((beat - 176.0) / 1.0));
