@@ -1,3 +1,7 @@
+#ifdef GL_ES
+precision mediump float;
+#endif
+
 #define TAU 6.283185307
 #define PI 3.141592654
 #define HALF_PI 1.5707963267948966
@@ -7,13 +11,15 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-//#define saturate(x) (clamp(x, 0.0, 1.0))
+#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM 130.
 
+uniform float time;
+uniform vec2 resolution;
+
 const int Iterations = 3;
 
-float time;
 float beat, sceneBeat, kick, hihat, snare;
 float stageScale;
 float edgeOnly;
@@ -589,7 +595,6 @@ float exponentialOut(float t) {
 
 vec3 scene(vec2 p)
 {
-    time = iTime + 0.0;
     beat = time * BPM / 60.0;
 
     float cameraF = sin(beat * 0.25);
@@ -768,13 +773,13 @@ vec3 postProcess(vec2 uv, vec3 col)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     // fragment position
-    vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
+    vec2 p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
 
     vec3 col =  scene(p);
-    vec2 pp = fragCoord/iResolution.xy;
+    vec2 pp = fragCoord/resolution.xy;
     col = postProcess(p, col);
     //col = vec3(1.0);
-    vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 uv = fragCoord.xy / resolution.xy;
     uv *=  1.0 - uv.yx;
     float vig = uv.x*uv.y * 200.0;
     vig = pow(vig, 0.1);
@@ -782,4 +787,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = mix(col, vec3(1.), saturate((beat - 251.0) / 4.0));
     col = mix(col, vec3(0.), saturate((beat - 256.0) / 2.0));
     fragColor = vec4(col, 1.0);
+}
+
+void main() {
+    vec4 col;
+    mainImage(col, gl_FragCoord.xy);
+    gl_FragColor = col;
 }
