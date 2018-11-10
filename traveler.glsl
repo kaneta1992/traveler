@@ -118,11 +118,11 @@ float sdBox( vec3 p, vec3 b )
 float de(vec3 p, mat3 rot, float scale) {
     vec3 offset = vec3(1,1,1);
 
-    p*=transpose(rot);
     float freq = 64.0;
     for (int i=0; i<Iterations; i++) {
-        
-        p*=rot;
+        if (i != 0) {
+            p*=rot;
+        }
         p = abs(p);
 
         if (beat < 44.0) {
