@@ -767,14 +767,28 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    // fragment position
-    vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-
-    vec3 col =  scene(p);
-    vec2 pp = fragCoord/iResolution.xy;
-    col = postProcess(p, col);
-    //col = vec3(1.0);
     vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 block = floor(fragCoord.xy / vec2(16));
+    vec2 uv_noise = block / vec2(64);
+    uv_noise += floor(vec2(iTime) * vec2(1234.0, 3543.0)) / vec2(64);
+
+    float block_thresh = pow(fract(iTime * 1236.0453), 2.0) * .1;
+    float line_thresh = pow(fract(iTime * 2236.0453), 3.0) * .3;
+
+    vec2 noise1 = hash(uv_noise) * 0.5 + 0.5;
+    vec2 noise2 = hash(vec2(uv_noise.y, 0.0)) * 0.5 + 0.5;
+
+    if  (noise1.r < block_thresh ||
+        noise2.g < line_thresh) {
+        float audioEnvelope = 0.5;
+        vec2 dist = (fract(uv_noise) - 0.5) * audioEnvelope;
+        fragCoord.x -= dist.x * 250.1 * audioEnvelope;
+        fragCoord.y -= dist.y * 250.2 * audioEnvelope;
+    }
+    vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
+    vec3 col =  scene(p);
+
+    col = postProcess(p, col);
     uv *=  1.0 - uv.yx;
     float vig = uv.x*uv.y * 200.0;
     vig = pow(vig, 0.1);
