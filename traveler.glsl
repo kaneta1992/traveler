@@ -856,8 +856,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         noise2.g < line_thresh) {
         float audioEnvelope = 0.5;
         vec2 dist = (fract(uv_noise) - 0.5) * audioEnvelope;
-        //fragCoord.x -= dist.x * 250.1 * audioEnvelope;
-        //fragCoord.y -= dist.y * 250.2 * audioEnvelope;
+        fragCoord.x -= dist.x * 250.1 * audioEnvelope;
+        fragCoord.y -= dist.y * 250.2 * audioEnvelope;
     }
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
     vec3 col =  scene(p);
