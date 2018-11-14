@@ -224,7 +224,7 @@ mat2 rot(float x)
     return mat2(cos(x), sin(x), -sin(x), cos(x));
 }
 
-float ifs(vec3 p) {
+/*float ifs(vec3 p) {
     p *= 15.;
 	for(int i = 0; i < 3; i++) {
         p.xy *= rot(0.8 + .8*stepUp(beat + 1.0, 2.0, 0.5));
@@ -233,7 +233,7 @@ float ifs(vec3 p) {
 		p = 2.0*p - 1.0;
 	}
 	return sdBox(p, vec3(.9))*pow(2.0, -3.0) / 15.0;
-}
+}*/
 
 vec2 distMetaBall(vec3 p)
 {
@@ -255,9 +255,9 @@ vec2 distTorus(vec3 p)
     return vec2(min(t3, min(t1, t2)), MAT_WING);
 }
 
-vec2 distIFS(vec3 p)
+vec2 distBox(vec3 p)
 {
-    float i = ifs(p);
+    float i = sdBox(p, vec3(.06));
     return vec2(i, MAT_WING);
 }
 
@@ -268,10 +268,10 @@ vec2 distTraveler(vec3 p)
 
 vec2 distTraveler2(vec3 p)
 {
-    vec2 d3 = distMetaBall(p);
-    vec2 d2 = distTorus(p);
-    vec2 d1 = distIFS(p);
-    float s = mod(stepUp(beat, 7.0, 2.0), 3.0);
+    vec2 d1 = distMetaBall(p);
+    vec2 d3 = distTorus(p);
+    vec2 d2 = distBox(p);
+    float s = mod(stepUp(beat, 6.0, 3.0), 3.0);
     vec2 d = d1;
     d.x = mix(d.x, d2.x, saturate(s));
     d.x = mix(d.x, d3.x, saturate(s - 1.0));
@@ -285,9 +285,7 @@ vec2 distAll(vec3 p)
     vec2 st2 = distStage(p, stageRot2 * stageRot, stageScale);
     vec2 tr = distTraveler((p - sp) * sphereRot);
     vec2 tr2 = distTraveler2((p - sp) * sphereRot);
-    if (p.y > 0.75 + switchTraveler* 0.1) {
-        tr = tr2;
-    }
+    tr = mix(tr, tr2, step(0.75 + switchTraveler* 0.1, p.y));
     if (beat > 176.0) {
         if (distance(p, sp) > max(beat - 177.0, 0.0) * 1.7) {
             st1.x = 100.0;
