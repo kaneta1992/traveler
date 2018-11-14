@@ -27,6 +27,8 @@ float stageFlareIntensity, travelerFlareIntensity, stageFlareExp, travelerFlareE
 float shadeIntensity, glowIntensity, particleIntensity;
 float stageFold, stageRotateZ;
 float particle1Intensity, particle2Intensity;
+float switchTraveler;
+float glitchIntensity;
 
 float smin( float a, float b, float k )
 {
@@ -37,6 +39,11 @@ float smin( float a, float b, float k )
 float sm(float start, float end, float t, float smo)
 {
     return smoothstep(start, start + smo, t) - smoothstep(end - smo, end, t);
+}
+
+float sm2(float start, float end, float t, float bs, float es)
+{
+    return smoothstep(start, start + bs, t) - smoothstep(end - es, end, t);
 }
 
 vec3 hash3( vec3 p ){
@@ -220,8 +227,8 @@ mat2 rot(float x)
 float ifs(vec3 p) {
     p *= 15.;
 	for(int i = 0; i < 3; i++) {
-        p.xy *= rot(0.8);
-        p.xz *= rot(0.4 + 1.4*cos(beat * 0.5));
+        p.xy *= rot(0.8 + .8*stepUp(beat + 1.0, 2.0, 0.5));
+        p.xz *= rot(0.4 + .4*stepUp(beat, 2.0, 0.5));
 		p = abs(p);
 		p = 2.0*p - 1.0;
 	}
@@ -261,10 +268,10 @@ vec2 distTraveler(vec3 p)
 
 vec2 distTraveler2(vec3 p)
 {
-    vec2 d1 = distMetaBall(p);
+    vec2 d3 = distMetaBall(p);
     vec2 d2 = distTorus(p);
-    vec2 d3 = distIFS(p);
-    float s = mod(stepUp(beat, 2.0, 1.0), 3.0);
+    vec2 d1 = distIFS(p);
+    float s = mod(stepUp(beat, 7.0, 2.0), 3.0);
     vec2 d = d1;
     d.x = mix(d.x, d2.x, saturate(s));
     d.x = mix(d.x, d3.x, saturate(s - 1.0));
@@ -278,7 +285,7 @@ vec2 distAll(vec3 p)
     vec2 st2 = distStage(p, stageRot2 * stageRot, stageScale);
     vec2 tr = distTraveler((p - sp) * sphereRot);
     vec2 tr2 = distTraveler2((p - sp) * sphereRot);
-    if (p.y > 0.75) {
+    if (p.y > 0.75 + switchTraveler* 0.1) {
         tr = tr2;
     }
     if (beat > 176.0) {
@@ -453,7 +460,7 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
         vec3 pattern = 19.3602379925 * spLocalNormal;
         float emission = min(1.0,  tex(pattern.zy, 113.09) + tex(pattern.xz, 113.09) + tex(pattern.xy, 113.09));
-        col += shade(pos, nor, ray, vec3(.1), vec3(.1), 30.);
+        col += shade(pos, nor, ray, vec3(.1), vec3(.1), mix(5.0, 100.0, emission));
         col += vec3(1.0, 0.25, 0.35) * 1. * emission * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
     } else if (mat.y == MAT_BODY) {
         //col += shade(pos, nor, ray, vec3(.05), vec3(.05), 5.);
@@ -552,7 +559,7 @@ vec4 trace(vec3 ro, vec3 ray)
     float t = 0.0;
     float stepIntensity = 0.0;
     vec2 res;
-    for (int i = 0; i < 42; i++) {
+    for (int i = 0; i < 38; i++) {
         vec3 p = ro+ray*t;
         res = distAll(p);
         if( res.x < 0.0001 || t > 100.0) {
@@ -661,8 +668,6 @@ float exponentialOut(float t) {
 
 vec3 scene(vec2 p)
 {
-    time = iTime + 70.0;
-    beat = time * BPM / 60.0;
 
     float cameraF = sin(beat * 0.25);
     float scene0Beat = beat;
@@ -755,7 +760,7 @@ vec3 scene(vec2 p)
         particle2Intensity = mix(0.016, 0.0007, particleAnim);
         particleIntensity = mix(0.0, 1.0, saturate((beat - 145.0) * 10.0));
 
-        float av2 = quadraticInOut(saturate((beat - 168.0) / 8.0));
+        float av2 = quadraticInOut(saturate((beat - 172.0) / 4.0));
         float av3 = exponentialOut(saturate((beat - 176.0) / 1.0));
         fov = mix(fov, 1.5, av2);
         cameraInit(p, mix(sp + scene3CameraPos, sp + scene4CameraPos, av2),
@@ -841,23 +846,35 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+    time = iTime + .0;
+    beat = time * BPM / 60.0;
+
+    switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
+    glitchIntensity = step(44.0, beat) * exp(-3.0 * max(0.0, beat - 44.0)) +
+                                 step(144.0, beat) * exp(-3.0 * max(0.0, beat - 144.0)) +
+                                 step(176.0, beat) * exp(-3.0 * max(0.0, beat - 176.0)) +
+                                 sm2(234.0, 240., beat, 4.0, 0.5);
+
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec2 block = floor(fragCoord.xy / vec2(16));
     vec2 uv_noise = block / vec2(64);
     uv_noise += floor(vec2(iTime) * vec2(1234.0, 3543.0)) / vec2(64);
 
-    float block_thresh = pow(fract(iTime * 1236.0453), 2.0) * .1;
-    float line_thresh = pow(fract(iTime * 2236.0453), 3.0) * .3;
+    float block_thresh = pow(fract(iTime * 1236.0453), 2.0) * .5;
+    float line_thresh = pow(fract(iTime * 2236.0453), 3.0) * .6;
 
     vec2 noise1 = hash(uv_noise) * 0.5 + 0.5;
     vec2 noise2 = hash(vec2(uv_noise.y, 0.0)) * 0.5 + 0.5;
 
     if  (noise1.r < block_thresh ||
         noise2.g < line_thresh) {
-        float audioEnvelope = 0.5;
-        vec2 dist = (fract(uv_noise) - 0.5) * audioEnvelope;
-        fragCoord.x -= dist.x * 250.1 * audioEnvelope;
-        fragCoord.y -= dist.y * 250.2 * audioEnvelope;
+        vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
+        float intensity = 1.0 - smoothstep(0.3, 1.0, length(p));
+        intensity *= sm(-0.4 + switchTraveler, 0.4 + switchTraveler, p.y, 0.1);
+        intensity = saturate(intensity + glitchIntensity);
+        vec2 dist = (fract(uv_noise) - 0.5) * intensity;
+        fragCoord.x -= dist.x * 250.1 * intensity;
+        fragCoord.y -= dist.y * 250.2 * intensity;
     }
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
     vec3 col =  scene(p);
@@ -869,5 +886,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = saturate(pow(col, vec3(1.0 / 2.2))) * vig;
     col = mix(col, vec3(1.), saturate((beat - 251.0) / 4.0));
     col = mix(col, vec3(0.), saturate((beat - 256.0) / 2.0));
+
     fragColor = vec4(col, 1.0);
 }
