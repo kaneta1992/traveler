@@ -9,7 +9,7 @@
 
 #define saturate(x) (clamp(x, 0.0, 1.0))
 
-#define BPM (130.*1.)
+#define BPM (130.*3.)
 
 const int Iterations = 3;
 
@@ -683,6 +683,8 @@ vec3 scene(vec2 p)
     float cscene3to4 = quadraticInOut(saturate((beat - 172.0) / 4.0));
     float cscene3to4_2 = exponentialOut(saturate((beat - 176.0) / 1.0));
 
+    float scene2to3FadeOut = saturate((beat - 140.0) / 4.0 );
+
     ////// Traveler //////
     float toffset = max(0.0, beat - 239.5) * 0.7;
     sp = mix(vec3(0.75, 0.75, mix(-20.0, 20.0, beat / 16.0)), vec3(0.75, 0.75, 0.2 + beat * 0.25 + toffset), cscene0to1);
@@ -750,6 +752,19 @@ vec3 scene(vec2 p)
     ray = cm * normalize(vec3(p, fov));
     ////////////////////
 
+    ////// Fog //////
+    vec3 scene0Fog = vec3(0.0);
+    vec3 scene2Fog = vec3(8., 16., 32.);
+    vec3 scene3Fog = vec3(0.0);
+    vec3 scene4Fog = vec3(8., 16., 32.);
+
+    float scene0to1Fog = saturate((beat - 46.0) * 0.5);
+    float scene3to4Fog = saturate((beat - 184.0) * 0.5);
+    fogColor = mix(scene0Fog, scene2Fog, scene0to1Fog);
+    fogColor = mix(fogColor, scene3Fog, scene2to3FadeOut);
+    fogColor = mix(fogColor, scene4Fog, scene3to4Fog);
+    /////////////////
+
     shadeIntensity = 1.0;
     glowIntensity = 1.0;
     particleIntensity = 0.0;
@@ -761,7 +776,7 @@ vec3 scene(vec2 p)
 
     if (beat < 12.0) {
         initBeat(scene0Beat);
-        fogInit(vec3(0.0));
+        //fogInit(vec3(0.0));
         stageEdgeOnly(1.0);
         //travelerInit(vec3(0.75, 0.75, mix(-20.0, 20.0, sceneBeat / 16.0)));
         //vec3 cameraPos = vec3(0.0);
@@ -775,7 +790,7 @@ vec3 scene(vec2 p)
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
     } else if (beat < 44.0) {
         initBeat(scene1Beat);
-        fogInit(vec3(0.0));
+        //fogInit(vec3(0.0));
         stageEdgeOnly(1.0);
         //travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
         /*cameraInit(p, sp + scene1CameraPos,
@@ -786,7 +801,7 @@ vec3 scene(vec2 p)
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
     } else if (beat < 124.0) {
         initBeat(scene2Beat);
-        fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((sceneBeat - 2.0) * 0.5))));
+        //fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((sceneBeat - 2.0) * 0.5))));
         stageEdgeOnly(0.0);
         //travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
 
@@ -833,11 +848,11 @@ vec3 scene(vec2 p)
         initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(1.0, 0.0, animVal), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
         shadeIntensity = mix(1.0, 0.0, animVal);
         glowIntensity = mix(1.0, 0.0, animVal);
-        fogInit(mix(vec3(0.1, 0.2, 0.4) * 80.0, vec3(0.0), animVal));
+        //fogInit(mix(vec3(0.1, 0.2, 0.4) * 80.0, vec3(0.0), animVal));
         initLight(vec3(0.01), mix(vec3(0.2, 0.4, 0.8), vec3(0.0), animVal));
     } else {
         initBeat(scene1Beat);
-        fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((scene4Beat - 8.0) * 0.5))));
+        //fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((scene4Beat - 8.0) * 0.5))));
         stageEdgeOnly(0.0);
 
         //float av = exponentialOut(saturate((beat - 176.0) / 1.0));
@@ -909,7 +924,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iTime + 60.0;
+    time = iTime + 0.0;
     beat = time * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
