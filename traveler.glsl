@@ -396,22 +396,6 @@ float sdRect( vec2 p, vec2 b )
     return min(max(d.x, d.y),0.0) + length(max(d,0.0));
 }
 
-float tex2(vec2 p, float z)
-{
-    vec2 q = (fract(p / 10.0) - 0.5) * 10.0;
-    float d = 9999.0;
-    for (int i = 0; i < 2; ++i) {
-        q = abs(q) - 0.5;
-        q *= rot(0.785398);
-        q = abs(q) - 0.5;
-        q *= rot(z * 0.5);
-        float k = sdRect(q, vec2(1.0, 0.55 + q.x));
-        d = min(d, k);
-    }
-    float f = 1.0 / (1.0 + abs(d));
-    return pow(f, 16.0) + smoothstep(0.95, 1.0, f);
-}
-
 float tex(vec2 p, float z)
 {
     vec2 q = (fract(p / 10.0) - 0.5) * 10.0;
@@ -452,31 +436,27 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
 {
     vec3 pos = ro + ray * depth;
     vec3 nor = normal(pos, 0.0025);
+    vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
     vec3 col = vec3(0.);
 
+    vec3 coord = mix(19.3602379925 * spLocalNormal, pos * 9.3602379925, step(MAT_BODY, mat.y));
+    float pattern = min(1.0,  tex(coord.zy, 113.09) + tex(coord.xz, 113.09) + tex(coord.xy, 113.09));
+
     if (mat.y == MAT_WING) {
-        vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
-        vec3 pattern = 19.3602379925 * spLocalNormal;
-        float emission = min(1.0,  tex(pattern.zy, 113.09) + tex(pattern.xz, 113.09) + tex(pattern.xy, 113.09));
-        col += shade(pos, nor, ray, vec3(.1), vec3(.1), mix(5.0, 100.0, emission));
-        col += vec3(1.0, 0.25, 0.35) * 1. * emission * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
+        col += shade(pos, nor, ray, vec3(.1), vec3(.1), mix(5.0, 100.0, pattern));
+        col += vec3(1.0, 0.25, 0.35) * 1. * pattern * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
     } else if (mat.y == MAT_BODY) {
-        //col += shade(pos, nor, ray, vec3(.05), vec3(.05), 5.);
         col += vec3(1.0, 0.25, 0.35) * 1. * saturate(cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
     } else if (mat.y == MAT_STAGE) {
-        vec3 n = pos * 9.3602379925;
-        float edge = tex2(n.zy, 113.09) + tex2(n.xz, 113.09) + tex2(n.xy, 113.09);
         vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
         vec3 lvec = normalize(lpos - pos);
         float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
 
         // ステージが出現する演出
         float noShade = 0.0;
-        if (beat > 45.0) {
-            noShade = step(distance(pos, sp), sceneBeat);
-        }
+        noShade = step(distance(pos, sp), sceneBeat) * step(45.0, beat);
 
-        col += (shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly * noShade + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
+        col += (shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly * noShade + max(pattern, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
         col += light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), 25.);
     }
 
