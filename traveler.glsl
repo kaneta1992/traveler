@@ -858,7 +858,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                                  step(176.0, beat) * exp(-3.0 * max(0.0, beat - 176.0)) +
                                  sm2(234.0, 240., beat, 4.0, 0.5);
 
-    vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 uv = fragCoord.xy / resolution.xy;
     vec2 block = floor(fragCoord.xy / vec2(16));
     vec2 uv_noise = block / vec2(64);
     uv_noise += floor(vec2(iTime) * vec2(1234.0, 3543.0)) / vec2(64);
@@ -871,7 +871,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     if  (noise1.r < block_thresh ||
         noise2.g < line_thresh) {
-        vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
+        vec2 p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
         float intensity = 1.0 - smoothstep(0.3, 1.0, length(p));
         intensity *= sm(-0.4 + switchTraveler, 0.4 + switchTraveler, p.y, 0.1);
         intensity = saturate(intensity + glitchIntensity);
@@ -879,7 +879,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         fragCoord.x -= dist.x * 250.1 * intensity;
         fragCoord.y -= dist.y * 250.2 * intensity;
     }
-    vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
+    vec2 p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
     vec3 col =  scene(p);
 
     col = postProcess(p, col);
