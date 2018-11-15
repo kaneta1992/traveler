@@ -7,7 +7,7 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-//#define saturate(x) (clamp(x, 0.0, 1.0))
+#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
@@ -681,6 +681,7 @@ vec3 scene(vec2 p)
     float cscene2_1to2_2 = saturate((beat - 108.0) / 16.0);
     cscene2_1to2_2 = quadraticInOut(cscene2_1to2_2 * cscene2_1to2_2);
     float cscene3to4 = quadraticInOut(saturate((beat - 172.0) / 4.0));
+    float cscene3to4_2 = exponentialOut(saturate((beat - 176.0) / 1.0));
 
     ////// Traveler //////
     float toffset = max(0.0, beat - 239.5) * 0.7;
@@ -713,6 +714,7 @@ vec3 scene(vec2 p)
     float scene3_1CameraFov = 1.0;
     float scene3_2CameraFov = 3.5;
     float scene3_3CameraFov = 3.5;
+    float scene3_4CameraFov = 1.5;
     float scene4CameraFov = 0.65;
 
     vec2 rnd = hash(vec2(beat * 0.5)) * 0.05;
@@ -727,7 +729,7 @@ vec3 scene(vec2 p)
     ta = mix(scene0CameraTarget + vec3(rnd, 0.0), scene1CameraTarget, cscene0to1);
     ta = mix(ta, scene2CameraTarget, cscene1to2);
     ta = mix(ta, scene3CameraTarget, cscene2_1to2_2);
-    ta = mix(ta, scene4CameraTarget + vec3(rnd, 0.0), cscene3to4);
+    ta = mix(ta, scene4CameraTarget + vec3(rnd, 0.0), cscene3to4_2);
 
     float fov = mix(scene0CameraFov, scene1CameraFov, cscene0to1);
     fov = mix(fov, scene2_1CameraFov, cscene1to2);
@@ -739,9 +741,8 @@ vec3 scene(vec2 p)
     float scene3_1to3_2FovAnim = exponentialInOut(saturate((beat - 148.0) / 12.0));
     fov = mix(fov, scene3_2CameraFov, scene3_1to3_2FovAnim);
     fov = mix(fov, scene3_3CameraFov, cscene3to4);
-
-    float scene3_3to4FovAnim = exponentialOut(saturate((beat - 176.0) / 1.0));
-    fov = mix(fov, scene4CameraFov, scene3_3to4FovAnim);
+    fov = mix(fov, scene3_4CameraFov, cscene3to4);
+    fov = mix(fov, scene4CameraFov, cscene3to4_2);
 
     float cameraAng = mix(scene0CameraAngle, scene1CameraAngle, cscene0to1);
 
@@ -908,7 +909,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iTime + .0;
+    time = iTime + 60.0;
     beat = time * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
