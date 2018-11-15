@@ -765,6 +765,37 @@ vec3 scene(vec2 p)
     fogColor = mix(fogColor, scene4Fog, scene3to4Fog);
     /////////////////
 
+    ////// Flare //////
+    float scene0StageFlareIntensity = 0.0;
+    float scene2StageFlareIntensity = 0.5;
+    float scene3StageFlareIntensity = 0.0;
+    float scene4StageFlareIntensity = 0.3;
+
+    float scene0StageFlareExp = 1.0;
+    float scene2StageFlareExp = 8.0;
+    float scene4StageFlareExp = 6.0;
+
+    float scene0TravelerFlareIntensity = max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5);
+    float scene1TravelerFlareIntensity = max(0.2, cos(beat * 0.5) * 0.5 + 0.5);
+
+    float scene0TravelerFlareExp = mix(1.0, 800.0, distance(ro, sp) / 10.0);
+    float scene1TravelerFlareExp = 8.0;
+
+    stageFlareCol = vec3(.3, .6, 1.2);
+    travelerFlareCol = vec3(1., .25, .35);
+
+    stageFlareIntensity = mix(scene0StageFlareIntensity, scene2StageFlareIntensity, scene0to1Fog);
+    stageFlareIntensity = mix(stageFlareIntensity, scene3StageFlareIntensity, scene2to3FadeOut);
+    stageFlareIntensity = mix(stageFlareIntensity, scene4StageFlareIntensity, scene3to4Fog);
+
+    stageFlareExp = mix(scene0StageFlareExp, scene2StageFlareExp, cscene0to1);
+    stageFlareExp = mix(stageFlareExp, scene4StageFlareExp, scene3to4Fog);
+
+    travelerFlareIntensity = mix(scene0TravelerFlareIntensity, scene1TravelerFlareIntensity, cscene0to1);
+
+    travelerFlareExp = mix(scene0TravelerFlareExp, scene1TravelerFlareExp, cscene0to1);
+    ///////////////////
+
     shadeIntensity = 1.0;
     glowIntensity = 1.0;
     particleIntensity = 0.0;
@@ -787,7 +818,7 @@ vec3 scene(vec2 p)
                     0.0,
                     3.0);*/
         initLight(vec3(0.01), vec3(0.0));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
+        //initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
     } else if (beat < 44.0) {
         initBeat(scene1Beat);
         //fogInit(vec3(0.0));
@@ -798,7 +829,7 @@ vec3 scene(vec2 p)
                     cameraF * 0.1,
                     2.5);*/
         initLight(vec3(0.01), vec3(0.0));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
+        //initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
     } else if (beat < 124.0) {
         initBeat(scene2Beat);
         //fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((sceneBeat - 2.0) * 0.5))));
@@ -822,7 +853,7 @@ vec3 scene(vec2 p)
                     cang,
                     cfov);*/
         initLight(vec3(0.01), vec3(0.2, 0.4, 0.8));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, .5, saturate((sceneBeat - 2.0) * 0.5)), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
+        //initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, .5, saturate((sceneBeat - 2.0) * 0.5)), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
     } else if (beat < 176.0) {
         initBeat(scene2Beat);
         stageEdgeOnly(0.0);
@@ -845,7 +876,7 @@ vec3 scene(vec2 p)
                     mix(sp + scene3CameraTarget, sp + scene2CameraTarget, av3),
                     mix(cameraF * 0.1, sin(scene2Beat * 0.5) * 0.1, av2),
                     fov);*/
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(1.0, 0.0, animVal), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
+        //initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(1.0, 0.0, animVal), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
         shadeIntensity = mix(1.0, 0.0, animVal);
         glowIntensity = mix(1.0, 0.0, animVal);
         //fogInit(mix(vec3(0.1, 0.2, 0.4) * 80.0, vec3(0.0), animVal));
@@ -865,7 +896,7 @@ vec3 scene(vec2 p)
                     sin(scene2Beat * 0.5) * 0.1,
                     mix(1.5, 0.65, av));*/
         initLight(vec3(0.02), vec3(0.2, 0.4, 0.8) * 2.);
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, .3, animVal), 6.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
+        //initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, .3, animVal), 6.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
         particleIntensity = 1.0;
         stageFold = stepUp(scene4Beat, 64. * 0.25, 1.0) * 4.0 + 5.0 + stepUp(max(0.0, beat - 244.0), 1.0, 0.2) * 10.0;
         stageRotateZ = 1.0 - pingPong(scene4Beat, 64. * 0.25, 1.0);
