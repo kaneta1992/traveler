@@ -9,7 +9,7 @@
 
 //#define saturate(x) (clamp(x, 0.0, 1.0))
 
-#define BPM (130.*3.)
+#define BPM (130.*1.)
 
 const int Iterations = 3;
 
@@ -126,20 +126,15 @@ float de(vec3 p, mat3 rot, float scale) {
         }
         p = abs(p);
 
-        if (beat < 44.0) {
-            if (p.x < p.y) {p.yx = p.xy;}
-            if (p.x < p.z) {p.xz = p.zx;}
-            if (p.y < p.z) {p.yz = p.zy;}
-        } else if (beat < 108.0 || beat > 176.0) {
-            // TODO: シーン4のタイミングとbeatが合わない場合はオフセット用意しよう
-            // 全->横->全->縦->前->縦->ループ
-            float b = mix(beat - 44., beat - 192.0, step(176.0, beat));
-            if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(b, freq * 0.25, 1.0));}
-            if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(b, freq * 0.75, 1.0));}
-            if (p.y < p.z) {p.yz = mix(p.zy, p.yz, saturate(pingPong(mod(b, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(b, freq*0.75))));}
-        } else {
-            if (p.x < p.y) {p.yx = p.xy;}
-        }
+        // TODO: シーン4のタイミングとbeatが合わない場合はオフセット用意しよう
+        // 全->横->全->縦->前->縦->ループ
+        float b = mix(beat - 44., beat - 192.0, step(176.0, beat));
+        b = mix(b, 0.0, step(beat, 44.0));
+        b = mix(b, mod(beat, 8.0) + 64.0, step(108.0, beat) * step(beat, 176.0));
+        if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(b, freq * 0.25, 1.0));}
+        if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(b, freq * 0.75, 1.0));}
+        if (p.y < p.z) {p.yz = mix(p.zy, p.yz, saturate(pingPong(mod(b, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(b, freq*0.75))));}
+
         p.z -= 0.5*offset.z*(scale-1.)/scale;
         p.z = -abs(-p.z);
         p.z += 0.5*offset.z*(scale-1.)/scale;
@@ -842,7 +837,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iTime + 0.0;
+    time = iTime + 40.0;
     beat = time * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
