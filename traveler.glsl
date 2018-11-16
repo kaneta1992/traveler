@@ -9,7 +9,7 @@
 
 //#define saturate(x) (clamp(x, 0.0, 1.0))
 
-#define BPM (130.*1.)
+#define BPM (130.*3.)
 
 const int Iterations = 3;
 
@@ -80,30 +80,12 @@ float pingPong(float t, float len, float smo)
 
 float glowTime(vec3 p)
 {
-    float t = beat;
-    if (t < 44.0) {
-        return -1.0;
-    } else if (t > 52.0 && t < 108.0) {
-        return -1.0;
-    }
-    if (t > 52.0) {
-        t -= 52.0;
-        t -= 1.0;
-    } else if (t > 44.0) {
-        t -= 44.0;
-        t -= 1.0;
-    }
-
-    float tt = mod(t, 8.);
-    if (beat > 176.0 && beat < 184.0) {
-        tt = beat - 177.0;
-    } else if(beat > 184.0 && beat < 224.0) {
-        t = beat - 177.0;
-        tt = mod(t, 8.);
-    } else if(beat >224.0) {
-        tt = -1.0;
-    }
-    return tt;
+    float t = mix(beat, beat - 45.0, step(44.0, beat));
+    t = mix(t, mod(beat - 53.0, 8.), step(108.0, beat));
+    t = mix(t, beat - 177.0, step(176.0, beat) * step(beat, 184.0));
+    t = mix(t, mod(beat - 177.0, 8.), step(184.0, beat) * step(beat, 224.0));
+    t = mix(t, -1.0, saturate(step(beat, 44.0) + (step(52.0, beat) * step(beat, 108.0)) + step(224.0, beat)));
+    return t;
 }
 
 float patternIntensity(vec3 p)
@@ -860,7 +842,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iTime + 80.0;
+    time = iTime + 0.0;
     beat = time * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
