@@ -346,7 +346,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float maxt, in float
 {
     float res = 1.0;
     float t = mint;
-    for( int i=0; i<2; i++ )
+    for( int i=0; i<4; i++ )
     {
         float h = distAll( ro + rd*t).x;
         res = min( res, k*h/t );
@@ -391,13 +391,6 @@ vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, v
     return vec3(diff + spec) / (llen * llen);
 }
 
-vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float smoothness)
-{
-    vec3 col = light(pos, normal, ray, cameraLight * 2.0, ro, diffuse, specular, smoothness);
-    col += light(pos, normal, ray, stageLight, ro + vec3(0.0, 0.0, 2.0), diffuse, specular, smoothness);
-    return col;
-}
-
 vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
 {
     vec3 pos = ro + ray * depth;
@@ -409,24 +402,29 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
     float pattern = min(1.0,  tex(coord.zy, 113.09) + tex(coord.xz, 113.09) + tex(coord.xy, 113.09));
 
     if (mat.y == MAT_WING) {
-        col += shade(pos, nor, ray, vec3(.1), vec3(.1), mix(5.0, 100.0, pattern));
-        col += vec3(1.0, 0.25, 0.35) * 1. * pattern * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
+        vec3 cameraLightCol = light(pos, nor, ray, cameraLight * 2.0, ro, vec3(.1), vec3(.1), mix(5.0, 100.0, pattern));
+        vec3 stageLightCol = light(pos, nor, ray, stageLight, ro + vec3(0.0, 0.0, 2.0), vec3(.1), vec3(.1), mix(5.0, 100.0, pattern));
+        col += cameraLightCol + stageLightCol;
+        col += vec3(1.0, 0.25, 0.35) * 1.25 * pattern * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
     } else if (mat.y == MAT_BODY) {
         col += vec3(1.0, 0.25, 0.35) * 1. * saturate(cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
     } else if (mat.y == MAT_STAGE) {
         vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
         vec3 lvec = normalize(lpos - pos);
+
+        vec3 cameraLightCol = light(pos, nor, ray, cameraLight * 2.0, ro, vec3(1.), vec3(1.), 25.);
+        vec3 stageLightCol = light(pos, nor, ray, stageLight, ro + vec3(0.0, 0.0, 2.0), vec3(1.), vec3(1.), 25.);
         float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
 
         // ステージが出現する演出
         float noShade = 0.0;
         noShade = step(distance(pos, sp), sceneBeat) * step(45.0, beat);
 
-        col += (shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly * noShade + max(pattern, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
-        col += light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), 25.);
+        col += ((cameraLightCol + stageLightCol * sha) * edgeOnly * noShade + max(pattern, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
+        col += light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), 100.);
     }
 
-    return mix(col, fogColor, pow(depth * 0.02, 2.1));
+    return mix(col, fogColor, pow(depth * 0.018, 2.1));
 }
 
 vec3 rgb2hsv(vec3 hsv)
@@ -468,7 +466,7 @@ vec4 particleTrace(vec3 ro, vec3 ray, float maxDepth)
 {
     float t = 0.0;
     vec3 col = vec3(0.0);
-	for (int i = 0; i < 32; i++)
+	for (int i = 0; i < 48; i++)
 	{
         vec3 p = ro+ray*t;
         float d = distSphereParticle(p);
@@ -485,7 +483,7 @@ vec4 particle2Trace(vec3 ro, vec3 ray, float maxDepth)
 {
     float t = 0.0;
     vec3 col = vec3(0.0);
-	for (int i = 0; i < 32; i++)
+	for (int i = 0; i < 48; i++)
 	{
         vec3 p = ro+ray*t;
         float d = distCubeParticle(p);
@@ -503,7 +501,7 @@ vec4 trace(vec3 ro, vec3 ray)
     float t = 0.0;
     float stepIntensity = 0.0;
     vec2 res;
-    for (int i = 0; i < 38; i++) {
+    for (int i = 0; i < 64; i++) {
         vec3 p = ro+ray*t;
         res = distAll(p);
         if( res.x < 0.0001 || t > 100.0) {
@@ -669,7 +667,7 @@ vec3 scene(vec2 p)
 
     float scene0StageFlareExp = 1.0;
     float scene2StageFlareExp = 8.0;
-    float scene4StageFlareExp = 6.0;
+    float scene4StageFlareExp = 3.0;
 
     float scene0TravelerFlareIntensity = max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5);
     float scene1TravelerFlareIntensity = max(0.2, cos(beat * 0.5) * 0.5 + 0.5);
@@ -680,12 +678,14 @@ vec3 scene(vec2 p)
     stageFlareCol = vec3(.3, .6, 1.2);
     travelerFlareCol = vec3(1., .25, .35);
 
+    float scene3to4Flare = saturate((beat - 176.0) / 4.0);
+
     stageFlareIntensity = mix(scene0StageFlareIntensity, scene2StageFlareIntensity, scene0to1Fog);
     stageFlareIntensity = mix(stageFlareIntensity, scene3StageFlareIntensity, scene2to3FadeOut);
-    stageFlareIntensity = mix(stageFlareIntensity, scene4StageFlareIntensity, scene3to4Fog);
+    stageFlareIntensity = mix(stageFlareIntensity, scene4StageFlareIntensity, scene3to4Flare);
 
     stageFlareExp = mix(scene0StageFlareExp, scene2StageFlareExp, cscene0to1);
-    stageFlareExp = mix(stageFlareExp, scene4StageFlareExp, scene3to4Fog);
+    stageFlareExp = mix(stageFlareExp, scene4StageFlareExp, scene3to4Flare);
 
     travelerFlareIntensity = mix(scene0TravelerFlareIntensity, scene1TravelerFlareIntensity, cscene0to1);
 
@@ -693,13 +693,13 @@ vec3 scene(vec2 p)
     ///////////////////
 
     ////// Light //////
-    vec3 scene0CameraLight = vec3(.01);
-    vec3 scene4CameraLight = vec3(.02);
+    vec3 scene0CameraLight = vec3(.0065);
+    vec3 scene4CameraLight = vec3(0.04, 0.06, 0.08) * 0.2;
 
     vec3 scene0StageLight = vec3(.0);
     vec3 scene2StageLight = vec3(0.2, 0.4, 0.8);
     vec3 scene3StageLight = vec3(0.);
-    vec3 scene4StageLight = vec3(0.4, 0.8, 1.6);
+    vec3 scene4StageLight = vec3(0.4, 0.8, 1.6) * 2.;
 
     cameraLight = mix(scene0CameraLight, scene4CameraLight, cscene3to4_2);
 
@@ -736,7 +736,7 @@ vec3 scene(vec2 p)
     ////////////////////////
 
     ////// Traveler Light //////
-    travelerLight = mix(vec3(0.), vec3(.02, .004, .004), cscene3to4_2);
+    travelerLight = mix(vec3(0.), vec3(.02, .004, .004) * 1.25, cscene3to4_2);
     ////////////////////////////
 
     ////// Beat //////
