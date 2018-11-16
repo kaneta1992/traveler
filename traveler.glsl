@@ -7,7 +7,7 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-//#define saturate(x) (clamp(x, 0.0, 1.0))
+#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
@@ -170,12 +170,7 @@ vec2 distStage(vec3 p, mat3 rot, float scale)
     p.xy = foldRotate(p.xy - 0.75, stageFold) + 0.75;
     p = mod(p, 1.5) - 0.75;
     float d = de(p, rot, scale);
-
-    if (beat > 144.0 && beat < 176.0) {
-        // シーン3ではステージを表示しない
-        d = 100.0;
-    }
-
+    d = mix(d, .5, step(144.0, beat) * step(beat, 176.0));
     return vec2(d, MAT_STAGE);
 }
 
@@ -837,7 +832,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iTime + 0.0;
+    time = iTime + 70.0;
     beat = time * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
