@@ -288,9 +288,7 @@ float distCubeParticle(vec3 pos)
     vec3 rnd = hash3(id) * 2.0 - 1.0;
     mat3 rot = rotateMat(rnd.x * beat * 2.0, rnd.y * beat * 2.0, rnd.z * beat * 2.0);
     float d = sdBox((pos + rnd * 0.25) * rot, vec3(.025));
-    if (rnd.x < -0.7) {
-        d = .5;
-    }
+    d = mix(d, .5, step(rnd.x, -0.7));
     return d;
 }
 
@@ -302,9 +300,7 @@ float distSphereParticle(vec3 pos)
     vec3 rnd = hash3(id) * 2.0 - 1.0;
     mat3 rot = rotateMat(rnd.x * beat * 2.0, rnd.y * beat * 2.0, rnd.z * beat * 2.0);
     float d = sphere((pos * rot + rnd * 0.1), 0.01);
-    if (rnd.x < 0.0) {
-        d = 0.1;
-    }
+    d = mix(d, .1, step(rnd.x, 0.0));
     return d;
 }
 
