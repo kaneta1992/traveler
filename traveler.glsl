@@ -480,7 +480,7 @@ vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
 
         // 光らせたくないときは-1.0を返してる
         if (gt < 0.0) {
-            return vec3(0.);
+            break;
         }
 
         vec3 h = hash3(floor(p * 30.0) / 30.0) * 2.0 - 1.0;
@@ -837,7 +837,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iTime + 40.0;
+    time = iTime + 0.0;
     beat = time * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
