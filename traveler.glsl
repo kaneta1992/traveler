@@ -810,7 +810,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
-    float t = time + 80.0;
+    float t = time + 0.0;
     orgBeat = t * BPM / 60.0;
     beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
 
