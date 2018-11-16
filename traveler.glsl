@@ -500,7 +500,7 @@ vec4 trace(vec3 ro, vec3 ray)
     float t = 0.0;
     float stepIntensity = 0.0;
     vec2 res;
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < 80; i++) {
         vec3 p = ro+ray*t;
         res = distAll(p);
         if( res.x < 0.0001 || t > 100.0) {
@@ -662,11 +662,11 @@ vec3 scene(vec2 p)
     float scene0StageFlareIntensity = 0.0;
     float scene2StageFlareIntensity = 0.5;
     float scene3StageFlareIntensity = 0.0;
-    float scene4StageFlareIntensity = 0.3;
+    float scene4StageFlareIntensity = 0.4;
 
     float scene0StageFlareExp = 1.0;
     float scene2StageFlareExp = 8.0;
-    float scene4StageFlareExp = 3.0;
+    float scene4StageFlareExp = 2.0;
 
     float scene0TravelerFlareIntensity = max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5);
     float scene1TravelerFlareIntensity = max(0.2, cos(beat * 0.5) * 0.5 + 0.5);
