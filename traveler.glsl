@@ -7,7 +7,7 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-#define saturate(x) (clamp(x, 0.0, 1.0))
+//#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
@@ -257,15 +257,11 @@ vec2 distAll(vec3 p)
     vec2 st2 = distStage(p, stageRot2 * stageRot, stageScale);
     vec2 tr = distTraveler((p - sp) * sphereRot);
     vec2 tr2 = distTraveler2((p - sp) * sphereRot);
-    if (p.y > 0.75 + switchTraveler* 0.1) {
-        tr = tr2;
-    }
-    if (beat > 176.0) {
-        if (distance(p, sp) > max(beat - 177.0, 0.0) * 1.7) {
-            st1.x = 100.0;
-            st2.x = 100.0;
-        }
-    }
+    tr = mix(tr, tr2, step(0.75 + switchTraveler* 0.1, p.y));
+
+    float visibleStage = step(176.0, beat) * step(max(beat - 177.0, 0.0) * 1.7, distance(p, sp));
+    st1.x = mix(st1.x, 100.0, visibleStage);
+    st2.x = mix(st2.x, 100.0, visibleStage);
     return U(tr, U(st1, st2));
 }
 
