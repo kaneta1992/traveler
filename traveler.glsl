@@ -804,7 +804,9 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iTime + 70.0;
+    float t = iTime + 0.0;
+    beat = t * BPM / 60.0;
+    time = t + hash(fragCoord).x * 0.01 * (1.0 - saturate((beat - 230.0) / 4.0)) * step(12., beat);
     beat = time * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
@@ -816,10 +818,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec2 block = floor(fragCoord.xy / vec2(16));
     vec2 uv_noise = block / vec2(64);
-    uv_noise += floor(vec2(iTime) * vec2(1234.0, 3543.0)) / vec2(64);
+    uv_noise += floor(vec2(t) * vec2(1234.0, 3543.0)) / vec2(64);
 
-    float block_thresh = pow(fract(iTime * 1236.0453), 2.0) * .5;
-    float line_thresh = pow(fract(iTime * 2236.0453), 3.0) * .6;
+    float block_thresh = pow(fract(t * 1236.0453), 2.0) * .5;
+    float line_thresh = pow(fract(t * 2236.0453), 3.0) * .6;
 
     vec2 noise1 = hash(uv_noise) * 0.5 + 0.5;
     vec2 noise2 = hash(vec2(uv_noise.y, 0.0)) * 0.5 + 0.5;
