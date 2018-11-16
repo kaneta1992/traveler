@@ -7,14 +7,13 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-//#define saturate(x) (clamp(x, 0.0, 1.0))
+#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
 const int Iterations = 3;
 
-float time;
-float beat, sceneBeat, kick, hihat, snare;
+float orgBeat, beat, sceneBeat, kick, hihat, snare;
 float stageScale;
 float edgeOnly;
 vec3 fogColor;
@@ -804,22 +803,24 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iTime + 70.0;
-    beat = time * BPM / 60.0;
+    vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
+    float t = iTime + 80.0;
+    orgBeat = t * BPM / 60.0;
+    beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
 
-    switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
-    glitchIntensity = step(44.0, beat) * exp(-3.0 * max(0.0, beat - 44.0)) +
-                                 step(144.0, beat) * exp(-3.0 * max(0.0, beat - 144.0)) +
-                                 step(176.0, beat) * exp(-3.0 * max(0.0, beat - 176.0)) +
-                                 sm2(234.0, 240., beat, 4.0, 0.5);
+    switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, orgBeat, 8.0)));
+    glitchIntensity = step(44.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 44.0)) +
+                                 step(144.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 144.0)) +
+                                 step(176.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 176.0)) +
+                                 sm2(234.0, 240., orgBeat, 4.0, 0.5);
 
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec2 block = floor(fragCoord.xy / vec2(16));
     vec2 uv_noise = block / vec2(64);
-    uv_noise += floor(vec2(iTime) * vec2(1234.0, 3543.0)) / vec2(64);
+    uv_noise += floor(vec2(t) * vec2(1234.0, 3543.0)) / vec2(64);
 
-    float block_thresh = pow(fract(iTime * 1236.0453), 2.0) * .5;
-    float line_thresh = pow(fract(iTime * 2236.0453), 3.0) * .6;
+    float block_thresh = pow(fract(t * 1236.0453), 2.0) * .5;
+    float line_thresh = pow(fract(t * 2236.0453), 3.0) * .6;
 
     vec2 noise1 = hash(uv_noise) * 0.5 + 0.5;
     vec2 noise2 = hash(vec2(uv_noise.y, 0.0)) * 0.5 + 0.5;
@@ -833,8 +834,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec2 dist = (fract(uv_noise) - 0.5) * intensity;
         fragCoord.x -= dist.x * 250.1 * intensity;
         fragCoord.y -= dist.y * 250.2 * intensity;
+        //beat = orgBeat;
     }
-    vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
+    p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
     vec3 col =  scene(p);
 
     col = postProcess(p, col);
