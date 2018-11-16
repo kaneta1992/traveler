@@ -13,14 +13,14 @@ precision mediump float;
 
 #define saturate(x) (clamp(x, 0.0, 1.0))
 
-#define BPM 130.
+#define BPM (130.*1.)
 
 uniform float time;
 uniform vec2 resolution;
 
 const int Iterations = 3;
 
-float beat, sceneBeat, kick, hihat, snare;
+float orgBeat, beat, sceneBeat, kick, hihat, snare;
 float stageScale;
 float edgeOnly;
 vec3 fogColor;
@@ -86,30 +86,12 @@ float pingPong(float t, float len, float smo)
 
 float glowTime(vec3 p)
 {
-    float t = beat;
-    if (t < 44.0) {
-        return -1.0;
-    } else if (t > 52.0 && t < 108.0) {
-        return -1.0;
-    }
-    if (t > 52.0) {
-        t -= 52.0;
-        t -= 1.0;
-    } else if (t > 44.0) {
-        t -= 44.0;
-        t -= 1.0;
-    }
-
-    float tt = mod(t, 8.);
-    if (beat > 176.0 && beat < 184.0) {
-        tt = beat - 177.0;
-    } else if(beat > 184.0 && beat < 224.0) {
-        t = beat - 177.0;
-        tt = mod(t, 8.);
-    } else if(beat >224.0) {
-        tt = -1.0;
-    }
-    return tt;
+    float t = mix(beat, beat - 45.0, step(44.0, beat));
+    t = mix(t, mod(beat - 53.0, 8.), step(108.0, beat));
+    t = mix(t, beat - 177.0, step(176.0, beat) * step(beat, 184.0));
+    t = mix(t, mod(beat - 177.0, 8.), step(184.0, beat) * step(beat, 224.0));
+    t = mix(t, -1.0, saturate(step(beat, 44.0) + (step(52.0, beat) * step(beat, 108.0)) + step(224.0, beat)));
+    return t;
 }
 
 float patternIntensity(vec3 p)
@@ -150,20 +132,15 @@ float de(vec3 p, mat3 rot, float scale) {
         }
         p = abs(p);
 
-        if (beat < 44.0) {
-            if (p.x < p.y) {p.yx = p.xy;}
-            if (p.x < p.z) {p.xz = p.zx;}
-            if (p.y < p.z) {p.yz = p.zy;}
-        } else if (beat < 108.0 || beat > 176.0) {
-            // TODO: シーン4のタイミングとbeatが合わない場合はオフセット用意しよう
-            // 全->横->全->縦->前->縦->ループ
-            float b = sceneBeat + step(176.0, beat) * 12.0;
-            if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(b, freq * 0.25, 1.0));}
-            if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(b, freq * 0.75, 1.0));}
-            if (p.y < p.z) {p.yz = mix(p.zy, p.yz, saturate(pingPong(mod(b, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(b, freq*0.75))));}
-        } else {
-            if (p.x < p.y) {p.yx = p.xy;}
-        }
+        // TODO: シーン4のタイミングとbeatが合わない場合はオフセット用意しよう
+        // 全->横->全->縦->前->縦->ループ
+        float b = mix(beat - 44., beat - 192.0, step(176.0, beat));
+        b = mix(b, 0.0, step(beat, 44.0));
+        b = mix(b, mod(beat, 8.0) + 64.0, step(108.0, beat) * step(beat, 176.0));
+        if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(b, freq * 0.25, 1.0));}
+        if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(b, freq * 0.75, 1.0));}
+        if (p.y < p.z) {p.yz = mix(p.zy, p.yz, saturate(pingPong(mod(b, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(b, freq*0.75))));}
+
         p.z -= 0.5*offset.z*(scale-1.)/scale;
         p.z = -abs(-p.z);
         p.z += 0.5*offset.z*(scale-1.)/scale;
@@ -199,12 +176,7 @@ vec2 distStage(vec3 p, mat3 rot, float scale)
     p.xy = foldRotate(p.xy - 0.75, stageFold) + 0.75;
     p = mod(p, 1.5) - 0.75;
     float d = de(p, rot, scale);
-
-    if (beat > 144.0 && beat < 176.0) {
-        // シーン3ではステージを表示しない
-        d = 100.0;
-    }
-
+    d = mix(d, .5, step(144.0, beat) * step(beat, 176.0));
     return vec2(d, MAT_STAGE);
 }
 
@@ -292,12 +264,10 @@ vec2 distAll(vec3 p)
     vec2 tr = distTraveler((p - sp) * sphereRot);
     vec2 tr2 = distTraveler2((p - sp) * sphereRot);
     tr = mix(tr, tr2, step(0.75 + switchTraveler* 0.1, p.y));
-    if (beat > 176.0) {
-        if (distance(p, sp) > max(beat - 177.0, 0.0) * 1.7) {
-            st1.x = 100.0;
-            st2.x = 100.0;
-        }
-    }
+
+    float visibleStage = step(176.0, beat) * step(max(beat - 177.0, 0.0) * 1.7, distance(p, sp));
+    st1.x = mix(st1.x, 100.0, visibleStage);
+    st2.x = mix(st2.x, 100.0, visibleStage);
     return U(tr, U(st1, st2));
 }
 
@@ -324,9 +294,7 @@ float distCubeParticle(vec3 pos)
     vec3 rnd = hash3(id) * 2.0 - 1.0;
     mat3 rot = rotateMat(rnd.x * beat * 2.0, rnd.y * beat * 2.0, rnd.z * beat * 2.0);
     float d = sdBox((pos + rnd * 0.25) * rot, vec3(.025));
-    if (rnd.x < -0.7) {
-        d = .5;
-    }
+    d = mix(d, .5, step(rnd.x, -0.7));
     return d;
 }
 
@@ -338,9 +306,7 @@ float distSphereParticle(vec3 pos)
     vec3 rnd = hash3(id) * 2.0 - 1.0;
     mat3 rot = rotateMat(rnd.x * beat * 2.0, rnd.y * beat * 2.0, rnd.z * beat * 2.0);
     float d = sphere((pos * rot + rnd * 0.1), 0.01);
-    if (rnd.x < 0.0) {
-        d = 0.1;
-    }
+    d = mix(d, .1, step(rnd.x, 0.0));
     return d;
 }
 
@@ -386,7 +352,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float maxt, in float
 {
     float res = 1.0;
     float t = mint;
-    for( int i=0; i<2; i++ )
+    for( int i=0; i<4; i++ )
     {
         float h = distAll( ro + rd*t).x;
         res = min( res, k*h/t );
@@ -400,22 +366,6 @@ float sdRect( vec2 p, vec2 b )
 {
     vec2 d = abs(p) - b;
     return min(max(d.x, d.y),0.0) + length(max(d,0.0));
-}
-
-float tex2(vec2 p, float z)
-{
-    vec2 q = (fract(p / 10.0) - 0.5) * 10.0;
-    float d = 9999.0;
-    for (int i = 0; i < 2; ++i) {
-        q = abs(q) - 0.5;
-        q *= rot(0.785398);
-        q = abs(q) - 0.5;
-        q *= rot(z * 0.5);
-        float k = sdRect(q, vec2(1.0, 0.55 + q.x));
-        d = min(d, k);
-    }
-    float f = 1.0 / (1.0 + abs(d));
-    return pow(f, 16.0) + smoothstep(0.95, 1.0, f);
 }
 
 float tex(vec2 p, float z)
@@ -447,46 +397,40 @@ vec3 light(vec3 pos, vec3 normal, vec3 ray, vec3 col, vec3 lpos, vec3 diffuse, v
     return vec3(diff + spec) / (llen * llen);
 }
 
-vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float smoothness)
-{
-    vec3 col = light(pos, normal, ray, cameraLight * 2.0, ro, diffuse, specular, smoothness);
-    col += light(pos, normal, ray, stageLight, ro + vec3(0.0, 0.0, 2.0), diffuse, specular, smoothness);
-    return col;
-}
-
 vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
 {
     vec3 pos = ro + ray * depth;
     vec3 nor = normal(pos, 0.0025);
+    vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
     vec3 col = vec3(0.);
 
+    vec3 coord = mix(19.3602379925 * spLocalNormal, pos * 9.3602379925, step(MAT_BODY, mat.y));
+    float pattern = min(1.0,  tex(coord.zy, 113.09) + tex(coord.xz, 113.09) + tex(coord.xy, 113.09));
+
     if (mat.y == MAT_WING) {
-        vec3 spLocalNormal = normalize((pos - sp) * sphereRot);
-        vec3 pattern = 19.3602379925 * spLocalNormal;
-        float emission = min(1.0,  tex(pattern.zy, 113.09) + tex(pattern.xz, 113.09) + tex(pattern.xy, 113.09));
-        col += shade(pos, nor, ray, vec3(.1), vec3(.1), mix(5.0, 100.0, emission));
-        col += vec3(1.0, 0.25, 0.35) * 1. * emission * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
+        vec3 cameraLightCol = light(pos, nor, ray, cameraLight * 2.0, ro, vec3(.1), vec3(.1), mix(5.0, 100.0, pattern));
+        vec3 stageLightCol = light(pos, nor, ray, stageLight, ro + vec3(0.0, 0.0, 2.0), vec3(.1), vec3(.1), mix(5.0, 100.0, pattern));
+        col += cameraLightCol + stageLightCol;
+        col += vec3(1.0, 0.25, 0.35) * 1.25 * pattern * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
     } else if (mat.y == MAT_BODY) {
-        //col += shade(pos, nor, ray, vec3(.05), vec3(.05), 5.);
         col += vec3(1.0, 0.25, 0.35) * 1. * saturate(cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
     } else if (mat.y == MAT_STAGE) {
-        vec3 n = pos * 9.3602379925;
-        float edge = tex2(n.zy, 113.09) + tex2(n.xz, 113.09) + tex2(n.xy, 113.09);
         vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
         vec3 lvec = normalize(lpos - pos);
+
+        vec3 cameraLightCol = light(pos, nor, ray, cameraLight * 2.0, ro, vec3(1.), vec3(1.), 25.);
+        vec3 stageLightCol = light(pos, nor, ray, stageLight, ro + vec3(0.0, 0.0, 2.0), vec3(1.), vec3(1.), 25.);
         float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.25) / 1.25;
 
         // ステージが出現する演出
         float noShade = 0.0;
-        if (beat > 45.0) {
-            noShade = step(distance(pos, sp), sceneBeat);
-        }
+        noShade = step(distance(pos, sp), sceneBeat) * step(45.0, beat);
 
-        col += (shade(pos, nor, ray, vec3(1.), vec3(1.), 25.) *sha * edgeOnly * noShade + max(edge, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
-        col += light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), 25.);
+        col += ((cameraLightCol + stageLightCol * sha) * edgeOnly * noShade + max(pattern, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
+        col += light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), 100.);
     }
 
-    return mix(col, fogColor, pow(depth * 0.02, 2.1));
+    return mix(col, fogColor, pow(depth * 0.018, 2.1));
 }
 
 vec3 rgb2hsv(vec3 hsv)
@@ -507,7 +451,7 @@ vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
 
         // 光らせたくないときは-1.0を返してる
         if (gt < 0.0) {
-            return vec3(0.);
+            break;
         }
 
         vec3 h = hash3(floor(p * 30.0) / 30.0) * 2.0 - 1.0;
@@ -528,7 +472,7 @@ vec4 particleTrace(vec3 ro, vec3 ray, float maxDepth)
 {
     float t = 0.0;
     vec3 col = vec3(0.0);
-	for (int i = 0; i < 32; i++)
+	for (int i = 0; i < 48; i++)
 	{
         vec3 p = ro+ray*t;
         float d = distSphereParticle(p);
@@ -545,7 +489,7 @@ vec4 particle2Trace(vec3 ro, vec3 ray, float maxDepth)
 {
     float t = 0.0;
     vec3 col = vec3(0.0);
-	for (int i = 0; i < 32; i++)
+	for (int i = 0; i < 48; i++)
 	{
         vec3 p = ro+ray*t;
         float d = distCubeParticle(p);
@@ -563,7 +507,7 @@ vec4 trace(vec3 ro, vec3 ray)
     float t = 0.0;
     float stepIntensity = 0.0;
     vec2 res;
-    for (int i = 0; i < 38; i++) {
+    for (int i = 0; i < 64; i++) {
         vec3 p = ro+ray*t;
         res = distAll(p);
         if( res.x < 0.0001 || t > 100.0) {
@@ -590,54 +534,6 @@ void initBeat(float b)
     kick = mod(sceneBeat, 1.);
     hihat = sceneBeat < 16.0 ? 0.0 : pingPong(sceneBeat + 0.5, 1.0, 0.1) * 0.1;
     snare = sceneBeat < 32.0 ? 0.0 : stepUp(sceneBeat - 32.5, 2.0, 0.5);
-}
-
-void stageInit()
-{
-    stageScale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
-    stageRot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
-    vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
-    stageRot2 = rotateMat(angle.x, angle.y, angle.z);
-    sphereRot = rotateMat(sin(beat * 0.5),cos(beat * 0.5), sin(beat * 0.5 * .33));
-}
-
-void travelerInit(vec3 p)
-{
-    sp = p;
-}
-
-void cameraInit(vec2 p, vec3 origin, vec3 target, float angle, float fov)
-{
-    ro = origin;
-    ta = target;
-    mat3 cm = createCamera(ro, ta, angle);
-    ray = cm * normalize(vec3(p, fov));
-}
-
-void fogInit(vec3 col)
-{
-    fogColor = col;
-}
-
-void stageEdgeOnly(float val)
-{
-    edgeOnly = 1.0 - val;
-}
-
-void initLight(vec3 camera, vec3 stage)
-{
-    cameraLight = camera;
-    stageLight = stage;
-}
-
-void initFlare(vec3 stage, float stageIntensity, float stageExp, vec3 traveler, float travelerIntensity, float travelerExp)
-{
-    stageFlareCol = stage;
-    stageFlareIntensity = stageIntensity;
-    stageFlareExp = stageExp;
-    travelerFlareCol = traveler;
-    travelerFlareIntensity = travelerIntensity;
-    travelerFlareExp = travelerExp;
 }
 
 vec2 hash( vec2 p ){
@@ -679,124 +575,188 @@ vec3 scene(vec2 p)
     float scene3Beat = beat - 124.;
     float scene4Beat = beat - 176.;
 
-    vec3 scene1CameraPos = vec3(sin(scene1Beat * 0.475) * 0.3 + cameraF * 0.05, .15 + cameraF * 0.05, cos(scene1Beat * 0.475) * 0.3 + cameraF * 0.05);
-    vec3 scene2CameraPos = vec3(sin(scene2Beat * 0.2) * 0.15, cos(scene2Beat * 0.4) * 0.05 + 0.05, cos(scene2Beat * 0.15 + PI) * 0.05 - 0.2);
-    vec3 scene3CameraPos = vec3(cos(scene1Beat * 0.25) * 0.7 + cameraF * 0.05, .15 + cameraF * 0.05, sin(scene1Beat * 0.25) * 0.5 + cameraF * 0.05);
+    float cscene0to1 = step(12.0, beat);
+    float cscene1to2 = exponentialOut(saturate(beat - 44.));
+    float cscene2_1to2_2 = saturate((beat - 108.0) / 16.0);
+    cscene2_1to2_2 = quadraticInOut(cscene2_1to2_2 * cscene2_1to2_2);
+    float cscene3to4 = quadraticInOut(saturate((beat - 172.0) / 4.0));
+    float cscene3to4_2 = exponentialOut(saturate((beat - 176.0) / 1.0));
+
+    float scene2to3FadeOut = saturate((beat - 140.0) / 4.0 );
+
+    ////// Traveler //////
+    float toffset = max(0.0, beat - 239.5) * 0.7;
+    sp = mix(vec3(0.75, 0.75, mix(-20.0, 20.0, beat / 16.0)), vec3(0.75, 0.75, 0.2 + beat * 0.25 + toffset), cscene0to1);
+    //travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25 + toffset));
+    //////////////////////
+
+    ////// Camera //////
+    vec3 scene0CameraPos = vec3(0.9, 0.8, 0.0);
+    vec3 scene1CameraPos = sp + vec3(sin(scene1Beat * 0.475) * 0.3 + cameraF * 0.05, .15 + cameraF * 0.05, cos(scene1Beat * 0.475) * 0.3 + cameraF * 0.05);
+    vec3 scene2CameraPos = sp + vec3(sin(scene2Beat * 0.2) * 0.15, cos(scene2Beat * 0.4) * 0.05 + 0.05, cos(scene2Beat * 0.15 + PI) * 0.05 - 0.2);
+    vec3 scene3CameraPos = sp + vec3(cos(scene1Beat * 0.25) * 0.7 + cameraF * 0.05, .15 + cameraF * 0.05, sin(scene1Beat * 0.25) * 0.5 + cameraF * 0.05);
 
     float cb = scene1Beat - 4.0;
-    vec3 scene4CameraPos = vec3(sin(cb * 0.2) * 0.15, cos(cb * 0.4) * 0.05 + 0.05, cos(cb * 0.15 + PI) * 0.05 - 0.2);
+    vec3 scene4CameraPos = sp + vec3(sin(cb * 0.2) * 0.15, cos(cb * 0.4) * 0.05 + 0.05, cos(cb * 0.15 + PI) * 0.05 - 0.2);
 
-    vec3 scene1CameraTarget = vec3(0.);
-    vec3 scene2CameraTarget = vec3(0.0, 0.0, (sin(scene2Beat * 0.05) * 0.5 + 0.5) * 3.0);
-    vec3 scene3CameraTarget = vec3(0.);
+    vec3 scene0CameraTarget = vec3(0.75, 0.75, 1.0);
+    vec3 scene1CameraTarget = sp;
+    vec3 scene2CameraTarget = sp + vec3(0.0, 0.0, (sin(scene2Beat * 0.05) * 0.5 + 0.5) * 3.0);
+    vec3 scene3CameraTarget = sp;
+    vec3 scene4CameraTarget = sp + vec3(0.0, 0.0, (sin(scene2Beat * 0.05) * 0.5 + 0.5) * 3.0);
 
-    shadeIntensity = 1.0;
-    glowIntensity = 1.0;
-    particleIntensity = 0.0;
-    stageFold = 1.0;
-    stageRotateZ = 0.0;
-    particle1Intensity = 0.0002;
-    particle2Intensity = 0.0007;
-    travelerLight = vec3(0.);
+    float scene0CameraAngle = 0.0;
+    float scene1CameraAngle = sin(beat * 0.5) * 0.1;
 
-    if (beat < 12.0) {
-        initBeat(scene0Beat);
-        fogInit(vec3(0.0));
-        stageEdgeOnly(1.0);
-        travelerInit(vec3(0.75, 0.75, mix(-20.0, 20.0, sceneBeat / 16.0)));
-        vec3 cameraPos = vec3(0.9, 0.8, 0.0);
-        vec2 rnd = hash(vec2(sceneBeat * 0.5)) * 0.05 * max(0.0, 1.0 - distance(cameraPos, sp) / 5.0);
-        cameraPos.xy += rnd;
-        cameraInit(p, cameraPos,
-                    vec3(vec2(0.75, 0.75) + rnd, 1.0),
-                    0.0,
-                    3.0);
-        initLight(vec3(0.01), vec3(0.0));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5),  mix(1.0, 800.0, distance(ro, sp) / 10.0));
-    } else if (beat < 44.0) {
-        initBeat(scene1Beat);
-        fogInit(vec3(0.0));
-        stageEdgeOnly(1.0);
-        travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
-        cameraInit(p, sp + scene1CameraPos,
-                    sp + scene1CameraTarget,
-                    cameraF * 0.1,
-                    2.5);
-        initLight(vec3(0.01), vec3(0.0));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, 0.0, 1.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
-    } else if (beat < 124.0) {
-        initBeat(scene2Beat);
-        fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((sceneBeat - 2.0) * 0.5))));
-        stageEdgeOnly(0.0);
-        travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
+    float scene0CameraFov = 3.0;
+    float scene1CameraFov = 2.5;
+    float scene2_1CameraFov = 1.0;
+    float scene2_2CameraFov = 3.5;
+    float scene3_1CameraFov = 1.0;
+    float scene3_2CameraFov = 3.5;
+    float scene3_3CameraFov = 3.5;
+    float scene3_4CameraFov = 1.5;
+    float scene4CameraFov = 0.65;
 
-        float scene1to2 = saturate(beat - 44.);
-        vec3 cpos = mix(sp + scene1CameraPos, sp + scene2CameraPos, exponentialOut(scene1to2));
-        vec3 ctar = mix(sp + scene1CameraTarget, sp + scene2CameraTarget, exponentialOut(scene1to2));
-        float cang = mix(cameraF * 0.1, sin(scene2Beat * 0.5) * 0.1, exponentialOut(scene1to2));
-        float cfov = mix(2.5, 1.0, exponentialOut(scene1to2));
+    vec2 rnd = hash(vec2(beat * 0.5)) * 0.05;
+    rnd *= saturate(max(0.0, 1.0 - distance(scene0CameraPos, sp) / 5.0) * (1.0 - cscene0to1) +
+                     saturate((beat - 234.0) / 6.0) * (1.0 - saturate(beat - 240.0)));
 
-        float animVal = saturate((beat - 108.0) / 16.0);
-        animVal = quadraticInOut(animVal * animVal);
-        cpos = mix(cpos, sp + scene3CameraPos, animVal);
-        ctar = mix(ctar, sp + scene3CameraTarget, animVal);
-        cang = mix(cang, cameraF * 0.1, animVal);
-        cfov = mix(cfov, 3.5, animVal);
-        cameraInit(p, cpos,
-                    ctar,
-                    cang,
-                    cfov);
-        initLight(vec3(0.01), vec3(0.2, 0.4, 0.8));
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, .5, saturate((sceneBeat - 2.0) * 0.5)), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
-    } else if (beat < 176.0) {
-        initBeat(scene2Beat);
-        stageEdgeOnly(0.0);
-        travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25));
+    ro = mix(scene0CameraPos + vec3(rnd, 0.0), scene1CameraPos, cscene0to1);
+    ro = mix(ro, scene2CameraPos, cscene1to2);
+    ro = mix(ro, scene3CameraPos, cscene2_1to2_2);
+    ro = mix(ro, scene4CameraPos + vec3(rnd, 0.0) - vec3(0., 0., toffset), cscene3to4);
 
-        float animVal = saturate((beat - 140.0) / 4.0 );
-        float particleAnim = saturate((beat - 145.0) / 4.0 );
-        float fovAnim = quadraticInOut(saturate((beat - 144.0) / 1.0));
-        float fov = mix(3.5, 1.0, elasticOut(fovAnim));
-        fov = mix(fov, 3.5, exponentialInOut(saturate((beat - 148.0) / 12.0)));
+    ta = mix(scene0CameraTarget + vec3(rnd, 0.0), scene1CameraTarget, cscene0to1);
+    ta = mix(ta, scene2CameraTarget, cscene1to2);
+    ta = mix(ta, scene3CameraTarget, cscene2_1to2_2);
+    ta = mix(ta, scene4CameraTarget + vec3(rnd, 0.0), cscene3to4_2);
 
-        particle1Intensity = mix(0.003, 0.0002, particleAnim);
-        particle2Intensity = mix(0.016, 0.0007, particleAnim);
-        particleIntensity = mix(0.0, 1.0, saturate((beat - 145.0) * 10.0));
+    float fov = mix(scene0CameraFov, scene1CameraFov, cscene0to1);
+    fov = mix(fov, scene2_1CameraFov, cscene1to2);
+    fov = mix(fov, scene2_2CameraFov, cscene2_1to2_2);
 
-        float av2 = quadraticInOut(saturate((beat - 172.0) / 4.0));
-        float av3 = exponentialOut(saturate((beat - 176.0) / 1.0));
-        fov = mix(fov, 1.5, av2);
-        cameraInit(p, mix(sp + scene3CameraPos, sp + scene4CameraPos, av2),
-                    mix(sp + scene3CameraTarget, sp + scene2CameraTarget, av3),
-                    mix(cameraF * 0.1, sin(scene2Beat * 0.5) * 0.1, av2),
-                    fov);
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(1.0, 0.0, animVal), 8.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
-        shadeIntensity = mix(1.0, 0.0, animVal);
-        glowIntensity = mix(1.0, 0.0, animVal);
-        fogInit(mix(vec3(0.1, 0.2, 0.4) * 80.0, vec3(0.0), animVal));
-        initLight(vec3(0.01), mix(vec3(0.2, 0.4, 0.8), vec3(0.0), animVal));
-    } else {
-        initBeat(scene1Beat);
-        fogInit(mix(vec3(0.0), vec3(0.1, 0.2, 0.4) * 80.0, vec3(saturate((scene4Beat - 8.0) * 0.5))));
-        stageEdgeOnly(0.0);
+    float scene2_2to3_1FovAnim = elasticOut(quadraticInOut(saturate((beat - 144.0) / 1.0)));
+    fov = mix(fov, scene3_1CameraFov, scene2_2to3_1FovAnim);
 
-        float av = exponentialOut(saturate((beat - 176.0) / 1.0));
-        float toffset = max(0.0, beat - 239.5) * 0.7;
-        travelerInit(vec3(0.75, 0.75, 0.2 + beat * 0.25 + toffset));
-        float animVal = saturate((beat - 177.0) / 4.0);
-        vec2 rnd = hash(vec2(sceneBeat * 0.5)) * 0.05 * saturate((beat - 234.0) / 6.0) * (1.0 - saturate(beat - 240.0));
-        cameraInit(p, sp + scene4CameraPos + vec3(rnd, 0.0) - vec3(0.0, 0.0,  toffset),
-                    sp + scene2CameraTarget + vec3(rnd, 0.0),
-                    sin(scene2Beat * 0.5) * 0.1,
-                    mix(1.5, 0.65, av));
-        initLight(vec3(0.02), vec3(0.2, 0.4, 0.8) * 2.);
-        initFlare(vec3(0.2, 0.4, 0.8) * 1.5, mix(0.0, .3, animVal), 6.0, vec3(1.0, 0.25, 0.35), max(0.2, cos(beat * 0.5) * 0.5 + 0.5), 8.0);
-        particleIntensity = 1.0;
-        stageFold = stepUp(scene4Beat, 64. * 0.25, 1.0) * 4.0 + 5.0 + stepUp(max(0.0, beat - 244.0), 1.0, 0.2) * 10.0;
-        stageRotateZ = 1.0 - pingPong(scene4Beat, 64. * 0.25, 1.0);
-        travelerLight = vec3(.5, .1, .1) * 0.04;
-    }
-    stageInit();
+    float scene3_1to3_2FovAnim = exponentialInOut(saturate((beat - 148.0) / 12.0));
+    fov = mix(fov, scene3_2CameraFov, scene3_1to3_2FovAnim);
+    fov = mix(fov, scene3_3CameraFov, cscene3to4);
+    fov = mix(fov, scene3_4CameraFov, cscene3to4);
+    fov = mix(fov, scene4CameraFov, cscene3to4_2);
+
+    float cameraAng = mix(scene0CameraAngle, scene1CameraAngle, cscene0to1);
+
+    mat3 cm = createCamera(ro, ta, cameraAng);
+    ray = cm * normalize(vec3(p, fov));
+    ////////////////////
+
+    ////// Fog //////
+    vec3 scene0Fog = vec3(0.0);
+    vec3 scene2Fog = vec3(8., 16., 32.);
+    vec3 scene3Fog = vec3(0.0);
+    vec3 scene4Fog = vec3(8., 16., 32.);
+
+    float scene0to1Fog = saturate((beat - 46.0) * 0.5);
+    float scene3to4Fog = saturate((beat - 184.0) * 0.5);
+    fogColor = mix(scene0Fog, scene2Fog, scene0to1Fog);
+    fogColor = mix(fogColor, scene3Fog, scene2to3FadeOut);
+    fogColor = mix(fogColor, scene4Fog, scene3to4Fog);
+    /////////////////
+
+    ////// Flare //////
+    float scene0StageFlareIntensity = 0.0;
+    float scene2StageFlareIntensity = 0.5;
+    float scene3StageFlareIntensity = 0.0;
+    float scene4StageFlareIntensity = 0.3;
+
+    float scene0StageFlareExp = 1.0;
+    float scene2StageFlareExp = 8.0;
+    float scene4StageFlareExp = 3.0;
+
+    float scene0TravelerFlareIntensity = max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5);
+    float scene1TravelerFlareIntensity = max(0.2, cos(beat * 0.5) * 0.5 + 0.5);
+
+    float scene0TravelerFlareExp = mix(1.0, 800.0, distance(ro, sp) / 10.0);
+    float scene1TravelerFlareExp = 8.0;
+
+    stageFlareCol = vec3(.3, .6, 1.2);
+    travelerFlareCol = vec3(1., .25, .35);
+
+    float scene3to4Flare = saturate((beat - 176.0) / 4.0);
+
+    stageFlareIntensity = mix(scene0StageFlareIntensity, scene2StageFlareIntensity, scene0to1Fog);
+    stageFlareIntensity = mix(stageFlareIntensity, scene3StageFlareIntensity, scene2to3FadeOut);
+    stageFlareIntensity = mix(stageFlareIntensity, scene4StageFlareIntensity, scene3to4Flare);
+
+    stageFlareExp = mix(scene0StageFlareExp, scene2StageFlareExp, cscene0to1);
+    stageFlareExp = mix(stageFlareExp, scene4StageFlareExp, scene3to4Flare);
+
+    travelerFlareIntensity = mix(scene0TravelerFlareIntensity, scene1TravelerFlareIntensity, cscene0to1);
+
+    travelerFlareExp = mix(scene0TravelerFlareExp, scene1TravelerFlareExp, cscene0to1);
+    ///////////////////
+
+    ////// Light //////
+    vec3 scene0CameraLight = vec3(.0065);
+    vec3 scene4CameraLight = vec3(0.04, 0.06, 0.08) * 0.2;
+
+    vec3 scene0StageLight = vec3(.0);
+    vec3 scene2StageLight = vec3(0.2, 0.4, 0.8);
+    vec3 scene3StageLight = vec3(0.);
+    vec3 scene4StageLight = vec3(0.4, 0.8, 1.6) * 2.;
+
+    cameraLight = mix(scene0CameraLight, scene4CameraLight, cscene3to4_2);
+
+    stageLight = mix(scene0StageLight, scene2StageLight, cscene1to2);
+    stageLight = mix(stageLight, scene3StageLight, scene2to3FadeOut);
+    stageLight = mix(stageLight, scene4StageLight, scene4CameraFov);
+    ///////////////////
+
+    ////// Edge //////
+    edgeOnly = mix(0.0, 1.0, cscene1to2);
+    //////////////////
+
+    ////// Particle //////
+    particleIntensity = mix(0.0, 1.0, saturate((beat - 145.0) * 10.0));
+
+    float particleAnim = saturate((beat - 145.0) / 4.0 );
+    particle1Intensity = mix(0.003, 0.0002, particleAnim);
+    particle2Intensity = mix(0.016, 0.0007, particleAnim);
+    //////////////////////
+
+    ////// Shade //////
+    shadeIntensity = mix(1.0, 0.0, scene2to3FadeOut);
+    shadeIntensity = mix(shadeIntensity, 1.0, cscene3to4);
+    ///////////////////
+
+    ////// Glow //////
+    glowIntensity = mix(1.0, 0.0, scene2to3FadeOut);
+    glowIntensity = mix(glowIntensity, 1.0, cscene3to4);
+    //////////////////
+
+    ////// Last Stage //////
+    stageFold = mix(1.0, stepUp(scene4Beat, 64. * 0.25, 1.0) * 4.0 + 5.0 + stepUp(max(0.0, beat - 244.0), 1.0, 0.2) * 10.0, cscene3to4_2);
+    stageRotateZ = mix(0.0, 1.0 - pingPong(scene4Beat, 64. * 0.25, 1.0), cscene3to4_2);
+    ////////////////////////
+
+    ////// Traveler Light //////
+    travelerLight = mix(vec3(0.), vec3(.02, .004, .004) * 1.25, cscene3to4_2);
+    ////////////////////////////
+
+    ////// Beat //////
+    float bb = mix(scene1Beat, scene2Beat, cscene1to2);
+    initBeat(bb);
+    /////////////////
+
+    ////// stage //////
+    stageScale = 3.4 - mix(0.00, 0.25, clamp(kick, 0.0, 1.0));
+    stageRot = rotateMat(0.1-hihat,-hihat, 0.4-hihat);
+    vec3 angle = mod(vec3(snare * 1.3, snare * 0.27, snare * 0.69), vec3(TAU) * 0.5);
+    stageRot2 = rotateMat(angle.x, angle.y, angle.z);
+    sphereRot = rotateMat(sin(beat * 0.5),cos(beat * 0.5), sin(beat * 0.5 * .33));
+    ///////////////////
+
     vec4 c = trace(ro, ray);
     c.rgb += glowTrace(ro, ray, c.w + 0.01) * glowIntensity;
     vec4 p1 = particleTrace(ro, ray, c.w);
@@ -849,21 +809,24 @@ vec3 postProcess(vec2 uv, vec3 col)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    beat = time * BPM / 60.0;
+    vec2 p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+    float t = time + 80.0;
+    orgBeat = t * BPM / 60.0;
+    beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
 
-    switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
-    glitchIntensity = step(44.0, beat) * exp(-3.0 * max(0.0, beat - 44.0)) +
-                                 step(144.0, beat) * exp(-3.0 * max(0.0, beat - 144.0)) +
-                                 step(176.0, beat) * exp(-3.0 * max(0.0, beat - 176.0)) +
-                                 sm2(234.0, 240., beat, 4.0, 0.5);
+    switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, orgBeat, 8.0)));
+    glitchIntensity = step(44.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 44.0)) +
+                                 step(144.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 144.0)) +
+                                 step(176.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 176.0)) +
+                                 sm2(234.0, 240., orgBeat, 4.0, 0.5);
 
     vec2 uv = fragCoord.xy / resolution.xy;
     vec2 block = floor(fragCoord.xy / vec2(16));
     vec2 uv_noise = block / vec2(64);
-    uv_noise += floor(vec2(time) * vec2(1234.0, 3543.0)) / vec2(64);
+    uv_noise += floor(vec2(t) * vec2(1234.0, 3543.0)) / vec2(64);
 
-    float block_thresh = pow(fract(time * 1236.0453), 2.0) * .5;
-    float line_thresh = pow(fract(time * 2236.0453), 3.0) * .6;
+    float block_thresh = pow(fract(t * 1236.0453), 2.0) * .5;
+    float line_thresh = pow(fract(t * 2236.0453), 3.0) * .6;
 
     vec2 noise1 = hash(uv_noise) * 0.5 + 0.5;
     vec2 noise2 = hash(vec2(uv_noise.y, 0.0)) * 0.5 + 0.5;
@@ -877,8 +840,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec2 dist = (fract(uv_noise) - 0.5) * intensity;
         fragCoord.x -= dist.x * 250.1 * intensity;
         fragCoord.y -= dist.y * 250.2 * intensity;
+        //beat = orgBeat;
     }
-    vec2 p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+    p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
     vec3 col =  scene(p);
 
     col = postProcess(p, col);
