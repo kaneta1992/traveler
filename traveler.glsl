@@ -13,7 +13,6 @@
 
 const int Iterations = 3;
 
-float time;
 float beat, sceneBeat, kick, hihat, snare;
 float stageScale;
 float edgeOnly;
@@ -806,8 +805,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     float t = iTime + 0.0;
     beat = t * BPM / 60.0;
-    time = t + hash(fragCoord).x * 0.01 * (1.0 - saturate((beat - 230.0) / 4.0)) * step(12., beat);
-    beat = time * BPM / 60.0;
+    t += hash(fragCoord).x * 0.01 * (1.0 - saturate((beat - 230.0) / 4.0)) * step(12., beat);
+    beat = t * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, beat, 8.0)));
     glitchIntensity = step(44.0, beat) * exp(-3.0 * max(0.0, beat - 44.0)) +
