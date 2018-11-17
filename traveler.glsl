@@ -7,7 +7,7 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-//#define saturate(x) (clamp(x, 0.0, 1.0))
+#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
@@ -405,13 +405,15 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
     vec3 col = vec3(0.);
 
     vec3 coord = mix(19.3602379925 * spLocalNormal, pos * 9.3602379925, step(MAT_BODY, mat.y));
-    float pattern = min(1.0,  tex(coord.zy, 113.09) + tex(coord.xz, 113.09) + tex(coord.xy, 113.09));
+    vec3 pattern = vec3(tex(coord.zy, 113.09),  tex(coord.xz, 113.09),  tex(coord.xy, 113.09));
 
     if (mat.y == MAT_WING) {
-        vec3 cameraLightCol = light(pos, nor, ray, cameraLight * 2.0, ro, vec3(.1), vec3(.1), mix(5.0, 100.0, pattern));
-        vec3 stageLightCol = light(pos, nor, ray, stageLight, ro + vec3(0.0, 0.0, 2.0), vec3(.1), vec3(.1), mix(5.0, 100.0, pattern));
+        float wing_pattern = saturate(pattern.x + pattern.y + pattern.z);
+        vec3 cameraLightCol = light(pos, nor, ray, cameraLight * 2.0, ro, vec3(.1), vec3(.1), mix(5.0, 100.0, wing_pattern));
+        vec3 stageLightCol = light(pos, nor, ray, stageLight, ro + vec3(0.0, 0.0, 2.0), vec3(.1), vec3(.1), mix(5.0, 100.0, wing_pattern));
         col += cameraLightCol + stageLightCol;
-        col += vec3(1.0, 0.25, 0.35) * 1.25 * pattern * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
+
+        col += vec3(1.0, 0.25, 0.35) * 1.25 * wing_pattern * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
     } else if (mat.y == MAT_BODY) {
         col += vec3(1.0, 0.25, 0.35) * 1. * saturate(cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
     } else if (mat.y == MAT_STAGE) {
@@ -426,7 +428,8 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         float noShade = 0.0;
         noShade = step(distance(pos, sp), sceneBeat) * step(45.0, beat);
 
-        col += ((cameraLightCol + stageLightCol * sha + light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), mix(25., 100., step(176.0, beat)))) * edgeOnly * noShade + max(pattern, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
+        float wing_pattern = pow(saturate(pattern.x + pattern.y + pattern.z), 1.2) * 1.2;
+        col += ((cameraLightCol + stageLightCol * sha + light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), mix(25., 100., step(176.0, beat)))) * edgeOnly * noShade + max(wing_pattern, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
     }
 
     return mix(col, fogColor, pow(depth * 0.018, 2.1));
@@ -517,7 +520,7 @@ vec4 trace(vec3 ro, vec3 ray)
     }
     vec3 p = ro + ray * t;
     float val = patternIntensity(p);
-    vec3 sg1 = pow(stepIntensity * 1.0, 5.0) * vec3(.2, .4, .8) * val * 20.0;
+    vec3 sg1 = pow(stepIntensity * 1.0, 5.0) * vec3(.2, .4, .8) * val * 5.;
     vec3 sg2 = pow(stepIntensity * 1.0, 1.0) * vec3(1., 0., 0.) - pow(stepIntensity * 1.0, 2.0) * vec3(0., 1., 1.);
     vec3 sg3 = pow(stepIntensity * 1.0, 1.0) * vec3(0., 0.5, .75);
     float v = saturate((beat - 236.0) / 4.0);
@@ -668,11 +671,11 @@ vec3 scene(vec2 p)
     float scene0StageFlareIntensity = 0.0;
     float scene2StageFlareIntensity = 0.5;
     float scene3StageFlareIntensity = 0.0;
-    float scene4StageFlareIntensity = 0.45;
+    float scene4StageFlareIntensity = 0.35;
 
     float scene0StageFlareExp = 1.0;
     float scene2StageFlareExp = 8.0;
-    float scene4StageFlareExp = 2.;
+    float scene4StageFlareExp = 2.5;
 
     float scene0TravelerFlareIntensity = max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5);
     float scene1TravelerFlareIntensity = max(0.2, cos(beat * 0.5) * 0.5 + 0.5);
@@ -810,7 +813,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-    float t = iTime + 100.0;
+    float t = iTime + 80.0;
     orgBeat = t * BPM / 60.0;
     beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
 
