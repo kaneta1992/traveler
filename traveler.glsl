@@ -7,7 +7,7 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-#define saturate(x) (clamp(x, 0.0, 1.0))
+//#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
@@ -543,6 +543,37 @@ vec2 hash( vec2 p ){
     return fract(sin(p)*43758.5453) * 2.0 - 1.0;
 }
 
+vec2 fbm_hash( vec2 x )
+{
+    const vec2 k = vec2( 0.3183099, 0.3678794 );
+    x = x*k + k.yx;
+    return -1.0 + 2.0*fract( 16.0 * k*fract( x.x*x.y*(x.x+x.y)) );
+}
+
+float noise( in vec2 p )
+{
+    vec2 i = floor( p );
+    vec2 f = fract( p );
+
+	vec2 u = f*f*(3.0-2.0*f);
+
+    return mix( mix( dot( fbm_hash( i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ),
+                     dot( fbm_hash( i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
+                mix( dot( fbm_hash( i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ),
+                     dot( fbm_hash( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
+}
+
+float fbm(vec2 uv, float s)
+{
+    uv *= s;
+    mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+	float f  = 0.5000*noise( uv ); uv = m*uv;
+	f += 0.2500*noise( uv ); uv = m*uv;
+	f += 0.1250*noise( uv ); uv = m*uv;
+	f += 0.0625*noise( uv ); uv = m*uv;
+    return f * 0.5 + 0.5;
+}
+
 float quadraticInOut(float t) {
   float p = 2.0 * t * t;
   return t < 0.5 ? p : -p + (4.0 * t) - 1.0;
@@ -813,7 +844,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-    float t = iTime + 80.0;
+    float t = iTime + 0.0;
     orgBeat = t * BPM / 60.0;
     beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
 
@@ -845,8 +876,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         fragCoord.y -= dist.y * 250.2 * intensity;
         //beat = orgBeat;
     }
-    p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-    vec3 col =  scene(p);
+
+    vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .5;
+    vec3 col =  scene(pp);
 
     col = postProcess(p, col);
     uv *=  1.0 - uv.yx;
