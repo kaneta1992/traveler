@@ -256,13 +256,17 @@ vec2 distAll(vec3 p)
     vec2 st2 = distStage(p, stageRot2 * stageRot, stageScale);
     vec2 tr = distTraveler((p - sp) * sphereRot);
     vec2 tr2 = distTraveler2((p - sp) * sphereRot);
-    tr = mix(tr, tr2, step(0.75 + switchTraveler* 0.1, p.y));
-    tr.x *= 0.9;
+
+    vec2 trd = tr;
+    trd = mix(trd, tr2, step(0.75 + switchTraveler* 0.1, p.y));
+    trd.x = mix(trd.x, tr2.x, saturate(beat - 208.));
+    trd.x = mix(trd.x, tr.x, saturate(beat - 224.));
+    trd.x *= 0.9;
 
     float visibleStage = step(176.0, beat) * step(max(beat - 177.0, 0.0) * 1.7, distance(p, sp));
     st1.x = mix(st1.x, 100.0, visibleStage);
     st2.x = mix(st2.x, 100.0, visibleStage);
-    return U(tr, U(st1, st2));
+    return U(trd, U(st1, st2));
 }
 
 vec2 distGlow(vec3 p)
@@ -542,6 +546,37 @@ void initBeat(float b)
 vec2 hash( vec2 p ){
     p = vec2( dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));
     return fract(sin(p)*43758.5453) * 2.0 - 1.0;
+}
+
+vec2 fbm_hash( vec2 x )
+{
+    const vec2 k = vec2( 0.3183099, 0.3678794 );
+    x = x*k + k.yx;
+    return -1.0 + 2.0*fract( 16.0 * k*fract( x.x*x.y*(x.x+x.y)) );
+}
+
+float noise( in vec2 p )
+{
+    vec2 i = floor( p );
+    vec2 f = fract( p );
+
+	vec2 u = f*f*(3.0-2.0*f);
+
+    return mix( mix( dot( fbm_hash( i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ),
+                     dot( fbm_hash( i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
+                mix( dot( fbm_hash( i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ),
+                     dot( fbm_hash( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
+}
+
+float fbm(vec2 uv, float s)
+{
+    uv *= s;
+    mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+	float f  = 0.5000*noise( uv ); uv = m*uv;
+	f += 0.2500*noise( uv ); uv = m*uv;
+	f += 0.1250*noise( uv ); uv = m*uv;
+	f += 0.0625*noise( uv ); uv = m*uv;
+    return f * 0.5 + 0.5;
 }
 
 float quadraticInOut(float t) {
@@ -885,8 +920,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         fragCoord.y -= dist.y * 250.2 * intensity;
         //beat = orgBeat;
     }
-    p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-    vec3 col =  scene(p);
+
+    vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .5;
+    vec3 col =  scene(pp);
 
     col = postProcess(p, col);
     uv *=  1.0 - uv.yx;
