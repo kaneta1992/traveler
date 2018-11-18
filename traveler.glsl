@@ -925,14 +925,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec2 dist = (fract(uv_noise) - 0.5) * intensity;
         fragCoord.x -= dist.x * 250.1 * intensity;
         fragCoord.y -= dist.y * 250.2 * intensity;
-        vec3 h = hash3(vec3(fract(uv_noise) - 0.5, 0.0));
+        vec3 h = hash3(vec3(fract(uv_noise) - 0.5, 0.0)) * 2.0;
         glitchColor = mix(vec3(1.0), h, intensity);
         //beat = orgBeat;
     }
 
     p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
     vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .5;
-    vec3 col =  scene(p) * glitchColor;
+    vec3 col =  scene(pp) * glitchColor;
 
     col = postProcess(p, col);
 
