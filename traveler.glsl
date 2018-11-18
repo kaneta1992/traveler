@@ -35,6 +35,7 @@ float stageFold, stageRotateZ;
 float particle1Intensity, particle2Intensity;
 float switchTraveler;
 float glitchIntensity;
+vec3 glitchColor;
 
 float smin( float a, float b, float k )
 {
@@ -263,12 +264,17 @@ vec2 distAll(vec3 p)
     vec2 st2 = distStage(p, stageRot2 * stageRot, stageScale);
     vec2 tr = distTraveler((p - sp) * sphereRot);
     vec2 tr2 = distTraveler2((p - sp) * sphereRot);
-    tr = mix(tr, tr2, step(0.75 + switchTraveler* 0.1, p.y));
+
+    vec2 trd = tr;
+    trd = mix(trd, tr2, step(0.75 + switchTraveler* 0.1, p.y));
+    trd.x = mix(trd.x, tr2.x, saturate(beat - 208.));
+    trd.x = mix(trd.x, tr.x, saturate(beat - 224.));
+    trd.x *= 0.9;
 
     float visibleStage = step(176.0, beat) * step(max(beat - 177.0, 0.0) * 1.7, distance(p, sp));
     st1.x = mix(st1.x, 100.0, visibleStage);
     st2.x = mix(st2.x, 100.0, visibleStage);
-    return U(tr, U(st1, st2));
+    return U(trd, U(st1, st2));
 }
 
 vec2 distGlow(vec3 p)
@@ -550,6 +556,37 @@ vec2 hash( vec2 p ){
     return fract(sin(p)*43758.5453) * 2.0 - 1.0;
 }
 
+vec2 fbm_hash( vec2 x )
+{
+    const vec2 k = vec2( 0.3183099, 0.3678794 );
+    x = x*k + k.yx;
+    return -1.0 + 2.0*fract( 16.0 * k*fract( x.x*x.y*(x.x+x.y)) );
+}
+
+float noise( in vec2 p )
+{
+    vec2 i = floor( p );
+    vec2 f = fract( p );
+
+	vec2 u = f*f*(3.0-2.0*f);
+
+    return mix( mix( dot( fbm_hash( i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ),
+                     dot( fbm_hash( i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
+                mix( dot( fbm_hash( i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ),
+                     dot( fbm_hash( i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
+}
+
+float fbm(vec2 uv, float s)
+{
+    uv *= s;
+    mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+	float f  = 0.5000*noise( uv ); uv = m*uv;
+	f += 0.2500*noise( uv ); uv = m*uv;
+	f += 0.1250*noise( uv ); uv = m*uv;
+	f += 0.0625*noise( uv ); uv = m*uv;
+    return f * 0.5 + 0.5;
+}
+
 float quadraticInOut(float t) {
   float p = 2.0 * t * t;
   return t < 0.5 ? p : -p + (4.0 * t) - 1.0;
@@ -633,16 +670,55 @@ vec3 scene(vec2 p)
 
     ro = mix(scene0CameraPos + vec3(rnd, 0.0), scene1CameraPos, cscene0to1);
     ro = mix(ro, scene2CameraPos, cscene1to2);
+
+    // scene2 side camera
+    float cscene2to2_1 = exponentialInOut(saturate((beat - 61.0) / 4.0));
+    float cscene2to2_2 = exponentialInOut(saturate((beat - 65.0) / 9.0));
+    float cscene2to2_3 = exponentialInOut(saturate((beat - 67.0) / 8.0));
+    float cscene2to2_3_2 = exponentialInOut(saturate((beat - 67.0) / 12.0));
+    vec3 scene2_1SidePos = sp + mix(vec3(30.0, 1.0, -10.0), vec3(1.0, .0, 1.0), cscene2to2_1);
+    vec3 scene2_2SidePos = sp + mix(vec3(1.0, 0.0, 1.0), vec3(sin(-beat * 3. + 0.8) * 1.25, 0.0, cos(-beat * 3. + 0.8)), cscene2to2_2);
+    ro = mix(ro, scene2_1SidePos, cscene2to2_1);
+    ro = mix(ro, scene2_2SidePos, cscene2to2_2);
+    ro = mix(ro, scene2CameraPos, cscene2to2_3);
+    ////
+
+    // scene2 vertical camera
+    float cscene2to2_4 = exponentialInOut(saturate((beat - 96.0) / 4.0));
+    float cscene2to2_5 = exponentialInOut(saturate((beat - 100.0) / 8.0));
+    vec3 scene2VerticalPos = sp + mix(vec3(1.0, 30.0, -10.0), vec3(0.1, sin(-beat * 0.5) * 2., cos(-beat * 0.5)) * 2., cscene2to2_4);
+    ////
+
+    ro = mix(ro, scene2VerticalPos, cscene2to2_4);
+    ro = mix(ro, scene2CameraPos, cscene2to2_5);
+
     ro = mix(ro, scene3CameraPos, cscene2_1to2_2);
     ro = mix(ro, scene4CameraPos + vec3(rnd, 0.0) - vec3(0., 0., toffset), cscene3to4);
 
     ta = mix(scene0CameraTarget + vec3(rnd, 0.0), scene1CameraTarget, cscene0to1);
     ta = mix(ta, scene2CameraTarget, cscene1to2);
+
+    // scene2 side camera
+    ta = mix(ta, sp, cscene2to2_1);
+    ta = mix(ta, scene2CameraTarget, cscene2to2_3_2);
+    ////
+
+    // scene2 vertical camera
+    ta = mix(ta, sp, cscene2to2_4);
+    ta = mix(ta, scene2CameraTarget, cscene2to2_5);
+    ////
+
     ta = mix(ta, scene3CameraTarget, cscene2_1to2_2);
     ta = mix(ta, scene4CameraTarget + vec3(rnd, 0.0), cscene3to4_2);
 
     float fov = mix(scene0CameraFov, scene1CameraFov, cscene0to1);
     fov = mix(fov, scene2_1CameraFov, cscene1to2);
+
+    // scene2 vertical camera
+    fov = mix(fov, 1.0, cscene2to2_4);
+    fov = mix(fov, scene2_1CameraFov, cscene2to2_5);
+    ////
+
     fov = mix(fov, scene2_2CameraFov, cscene2_1to2_2);
 
     float scene2_2to3_1FovAnim = elasticOut(quadraticInOut(saturate((beat - 144.0) / 1.0)));
@@ -828,9 +904,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                                  step(144.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 144.0)) +
                                  step(176.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 176.0)) +
                                  sm2(234.0, 240., orgBeat, 4.0, 0.5);
+    glitchColor = vec3(1.0);
 
-    vec2 uv = fragCoord.xy / resolution.xy;
-    vec2 block = floor(fragCoord.xy / vec2(16));
+
+    vec2 block = floor((p * 200.0) / vec2(16));
     vec2 uv_noise = block / vec2(64);
     uv_noise += floor(vec2(t) * vec2(1234.0, 3543.0)) / vec2(64);
 
@@ -842,19 +919,24 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     if  (noise1.r < block_thresh ||
         noise2.g < line_thresh) {
-        vec2 p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
         float intensity = 1.0 - smoothstep(0.3, 1.0, length(p));
         intensity *= sm(-0.4 + switchTraveler, 0.4 + switchTraveler, p.y, 0.1);
         intensity = saturate(intensity + glitchIntensity);
         vec2 dist = (fract(uv_noise) - 0.5) * intensity;
         fragCoord.x -= dist.x * 250.1 * intensity;
         fragCoord.y -= dist.y * 250.2 * intensity;
+        vec3 h = hash3(vec3(fract(uv_noise) - 0.5, 0.0));
+        glitchColor = mix(vec3(1.0), h, intensity);
         //beat = orgBeat;
     }
+
     p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
-    vec3 col =  scene(p);
+    vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .5;
+    vec3 col =  scene(p) * glitchColor;
 
     col = postProcess(p, col);
+
+    vec2 uv = fragCoord.xy / resolution.xy;
     uv *=  1.0 - uv.yx;
     float vig = uv.x*uv.y * 200.0;
     vig = pow(vig, 0.1);
