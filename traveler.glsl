@@ -7,7 +7,7 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-#define saturate(x) (clamp(x, 0.0, 1.0))
+//#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
