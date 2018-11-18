@@ -7,7 +7,7 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-#define saturate(x) (clamp(x, 0.0, 1.0))
+//#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
@@ -28,6 +28,7 @@ float stageFold, stageRotateZ;
 float particle1Intensity, particle2Intensity;
 float switchTraveler;
 float glitchIntensity;
+vec3 glitchColor;
 
 float smin( float a, float b, float k )
 {
@@ -813,7 +814,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-    float t = iTime + 80.0;
+    float t = iTime + 100.0;
     orgBeat = t * BPM / 60.0;
     beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
 
@@ -822,9 +823,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                                  step(144.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 144.0)) +
                                  step(176.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 176.0)) +
                                  sm2(234.0, 240., orgBeat, 4.0, 0.5);
+    glitchColor = vec3(1.0);
 
-    vec2 uv = fragCoord.xy / iResolution.xy;
-    vec2 block = floor(fragCoord.xy / vec2(16));
+
+    vec2 block = floor((p * 200.0) / vec2(16));
     vec2 uv_noise = block / vec2(64);
     uv_noise += floor(vec2(t) * vec2(1234.0, 3543.0)) / vec2(64);
 
@@ -836,19 +838,22 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     if  (noise1.r < block_thresh ||
         noise2.g < line_thresh) {
-        vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
         float intensity = 1.0 - smoothstep(0.3, 1.0, length(p));
         intensity *= sm(-0.4 + switchTraveler, 0.4 + switchTraveler, p.y, 0.1);
         intensity = saturate(intensity + glitchIntensity);
         vec2 dist = (fract(uv_noise) - 0.5) * intensity;
         fragCoord.x -= dist.x * 250.1 * intensity;
         fragCoord.y -= dist.y * 250.2 * intensity;
+        vec3 h = hash3(vec3(fract(uv_noise) - 0.5, 0.0));
+        glitchColor = mix(vec3(1.0), h, intensity);
         //beat = orgBeat;
     }
     p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-    vec3 col =  scene(p);
+    vec3 col =  scene(p) * glitchColor;
 
     col = postProcess(p, col);
+
+    vec2 uv = fragCoord.xy / iResolution.xy;
     uv *=  1.0 - uv.yx;
     float vig = uv.x*uv.y * 200.0;
     vig = pow(vig, 0.1);
