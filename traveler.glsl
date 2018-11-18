@@ -256,12 +256,16 @@ vec2 distAll(vec3 p)
     vec2 st2 = distStage(p, stageRot2 * stageRot, stageScale);
     vec2 tr = distTraveler((p - sp) * sphereRot);
     vec2 tr2 = distTraveler2((p - sp) * sphereRot);
-    tr = mix(tr, tr2, step(0.75 + switchTraveler* 0.1, p.y));
+
+    vec2 trd = tr;
+    trd = mix(trd, tr2, step(0.75 + switchTraveler* 0.1, p.y));
+    trd.x = mix(trd.x, tr2.x, saturate(beat - 208.));
+    trd.x = mix(trd.x, tr.x, saturate(beat - 224.));
 
     float visibleStage = step(176.0, beat) * step(max(beat - 177.0, 0.0) * 1.7, distance(p, sp));
     st1.x = mix(st1.x, 100.0, visibleStage);
     st2.x = mix(st2.x, 100.0, visibleStage);
-    return U(tr, U(st1, st2));
+    return U(trd, U(st1, st2));
 }
 
 vec2 distGlow(vec3 p)
