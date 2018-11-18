@@ -257,6 +257,7 @@ vec2 distAll(vec3 p)
     vec2 tr = distTraveler((p - sp) * sphereRot);
     vec2 tr2 = distTraveler2((p - sp) * sphereRot);
     tr = mix(tr, tr2, step(0.75 + switchTraveler* 0.1, p.y));
+    tr.x *= 0.9;
 
     float visibleStage = step(176.0, beat) * step(max(beat - 177.0, 0.0) * 1.7, distance(p, sp));
     st1.x = mix(st1.x, 100.0, visibleStage);
@@ -633,12 +634,21 @@ vec3 scene(vec2 p)
     float cscene2to2_2 = exponentialInOut(saturate((beat - 65.0) / 9.0));
     float cscene2to2_3 = exponentialInOut(saturate((beat - 67.0) / 8.0));
     float cscene2to2_3_2 = exponentialInOut(saturate((beat - 67.0) / 12.0));
-    vec3 scene2_1CameraPos = sp + mix(vec3(30.0, 1.0, -10.0), vec3(1.0, .0, 1.0), cscene2to2_1);
-    vec3 scene2_2CameraPos = sp + mix(vec3(1.0, 0.0, 1.0), vec3(sin(-beat * 3. + 0.8) * 1.25, 0.0, cos(-beat * 3. + 0.8)), cscene2to2_2);
-    ro = mix(ro, scene2_1CameraPos, cscene2to2_1);
-    ro = mix(ro, scene2_2CameraPos, cscene2to2_2);
+    vec3 scene2_1SidePos = sp + mix(vec3(30.0, 1.0, -10.0), vec3(1.0, .0, 1.0), cscene2to2_1);
+    vec3 scene2_2SidePos = sp + mix(vec3(1.0, 0.0, 1.0), vec3(sin(-beat * 3. + 0.8) * 1.25, 0.0, cos(-beat * 3. + 0.8)), cscene2to2_2);
+    ro = mix(ro, scene2_1SidePos, cscene2to2_1);
+    ro = mix(ro, scene2_2SidePos, cscene2to2_2);
     ro = mix(ro, scene2CameraPos, cscene2to2_3);
     ////
+
+    // scene2 vertical camera
+    float cscene2to2_4 = exponentialInOut(saturate((beat - 96.0) / 4.0));
+    float cscene2to2_5 = exponentialInOut(saturate((beat - 100.0) / 8.0));
+    vec3 scene2VerticalPos = sp + mix(vec3(1.0, 30.0, -10.0), vec3(0.1, sin(-beat * 0.5) * 2., cos(-beat * 0.5)) * 2., cscene2to2_4);
+    ////
+
+    ro = mix(ro, scene2VerticalPos, cscene2to2_4);
+    ro = mix(ro, scene2CameraPos, cscene2to2_5);
 
     ro = mix(ro, scene3CameraPos, cscene2_1to2_2);
     ro = mix(ro, scene4CameraPos + vec3(rnd, 0.0) - vec3(0., 0., toffset), cscene3to4);
@@ -651,11 +661,22 @@ vec3 scene(vec2 p)
     ta = mix(ta, scene2CameraTarget, cscene2to2_3_2);
     ////
 
+    // scene2 vertical camera
+    ta = mix(ta, sp, cscene2to2_4);
+    ta = mix(ta, scene2CameraTarget, cscene2to2_5);
+    ////
+
     ta = mix(ta, scene3CameraTarget, cscene2_1to2_2);
     ta = mix(ta, scene4CameraTarget + vec3(rnd, 0.0), cscene3to4_2);
 
     float fov = mix(scene0CameraFov, scene1CameraFov, cscene0to1);
     fov = mix(fov, scene2_1CameraFov, cscene1to2);
+
+    // scene2 vertical camera
+    fov = mix(fov, 1.0, cscene2to2_4);
+    fov = mix(fov, scene2_1CameraFov, cscene2to2_5);
+    ////
+
     fov = mix(fov, scene2_2CameraFov, cscene2_1to2_2);
 
     float scene2_2to3_1FovAnim = elasticOut(quadraticInOut(saturate((beat - 144.0) / 1.0)));
@@ -832,7 +853,7 @@ vec3 postProcess(vec2 uv, vec3 col)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-    float t = iTime + 0.0;
+    float t = iTime + 0.;
     orgBeat = t * BPM / 60.0;
     beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
 
