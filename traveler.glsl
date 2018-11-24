@@ -7,7 +7,7 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-#define saturate(x) (clamp(x, 0.0, 1.0))
+//#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
@@ -936,13 +936,16 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float ttt = (orgBeat - 240.0) * 2.0;
     p.y *= mix(mix(mix(1.0, 3.0, saturate(exponentialIn(ttt))), 1.2, saturate(exponentialOut(ttt - 1.0))), 2000.0, saturate(exponentialIn(ttt - 2.0)));
     p.x *= mix(mix(1.0, 3.0, saturate(exponentialOut(ttt - 1.0))), 0.5, saturate(exponentialOut(ttt - 2.0)));
-    if (p.y > 1.0 || p.y < -1.0 || p.x > iResolution.x / iResolution.y || p.x < -iResolution.x / iResolution.y) {
+
+    vec2 size = iResolution.xy / min(iResolution.x, iResolution.y);
+    if (p.y > size.y || p.y < -size.y || p.x > size.x || p.x < -size.x) {
         return;
     }
     vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .5;
     vec3 col =  scene(pp) * glitchColor;
 
     col = postProcess(p, col);
+    col = saturate(col);
     
     col = mix(col, 1.0 - col, step(228.0, orgBeat) * step(orgBeat, 228.5));
     col = mix(col, 1.0 - col, step(231.0, orgBeat) * step(orgBeat, 231.5));
