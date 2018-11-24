@@ -889,13 +889,13 @@ vec3 postProcess(vec2 uv, vec3 col)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-    float t = iTime + 105.;
+    float t = iTime + 100.;
     orgBeat = t * BPM / 60.0;
     
     float b = orgBeat;
     b = mix(b, 226.5 + mod(orgBeat * 2.0, 0.5), step(228.0, orgBeat) * step(orgBeat, 228.5));
     b = mix(b, 229.0 + mod(orgBeat * 2.0, 0.5), step(231.0, orgBeat) * step(orgBeat, 231.5));
-    b = mix(b, 232.0 + mod(orgBeat * 2.0, 0.5), step(232.0, orgBeat) * step(orgBeat, 233.0));
+    b = mix(b, 232.0 + mod(orgBeat * 2.0, 0.5), step(232.0, orgBeat) * step(orgBeat, 232.5));
     b = mix(b, 237.0 + mod(orgBeat * 4.0, 1.0), step(238.0, orgBeat) * step(orgBeat, 242.0));
     t = b * 60.0 / BPM;
     
@@ -949,7 +949,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     col = mix(col, 1.0 - col, step(228.0, orgBeat) * step(orgBeat, 228.5));
     col = mix(col, 1.0 - col, step(231.0, orgBeat) * step(orgBeat, 231.5));
-    col = mix(col, 1.0 - col, step(232.0, orgBeat) * step(orgBeat, 233.0));
+    col = mix(col, 1.0 - col, step(232.0, orgBeat) * step(orgBeat, 232.5));
     col = mix(col, 1.0 - col, step(238.0, orgBeat) * step(orgBeat, 243.0));
 
     vec2 uv = fragCoord.xy / iResolution.xy;
