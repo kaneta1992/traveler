@@ -933,12 +933,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
 
-    float ttt = (orgBeat - 240.0) * 2.0;
+    float ttt = (orgBeat - 240.0) * 2.75;
     p.y *= mix(mix(mix(1.0, 5.0, saturate(exponentialIn(ttt))), 1.1, saturate(exponentialOut(ttt - 1.0))), 2000.0, saturate(exponentialIn(ttt - 2.0)));
     p.x *= mix(mix(1.0, 3.0, saturate(exponentialOut(ttt - 1.0))), 0.5, saturate(exponentialOut(ttt - 2.0)));
 
     vec2 size = iResolution.xy / min(iResolution.x, iResolution.y);
-    if (p.y > size.y || p.y < -size.y || p.x > size.x || p.x < -size.x) {
+    if (p.y > size.y || p.y < -size.y || p.x > size.x || p.x < -size.x || ttt > 3.0) {
+        fragColor = vec4(0.0, 0.0, 0.0, 1.0);
         return;
     }
     vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .5;
