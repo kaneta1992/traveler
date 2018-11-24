@@ -889,13 +889,14 @@ vec3 postProcess(vec2 uv, vec3 col)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-    float t = iTime + 50.;
+    float t = iTime + 105.;
     orgBeat = t * BPM / 60.0;
     
     float b = orgBeat;
     b = mix(b, 226.5 + mod(orgBeat * 2.0, 0.5), step(228.0, orgBeat) * step(orgBeat, 228.5));
     b = mix(b, 229.0 + mod(orgBeat * 2.0, 0.5), step(231.0, orgBeat) * step(orgBeat, 231.5));
     b = mix(b, 232.0 + mod(orgBeat * 2.0, 0.5), step(232.0, orgBeat) * step(orgBeat, 233.0));
+    b = mix(b, 237.0 + mod(orgBeat * 4.0, 1.0), step(238.0, orgBeat) * step(orgBeat, 242.0));
     t = b * 60.0 / BPM;
     
     beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
@@ -904,7 +905,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     glitchIntensity = step(44.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 44.0)) +
                                  step(144.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 144.0)) +
                                  step(176.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 176.0)) +
-                                 sm2(234.0, 240., orgBeat, 4.0, 0.5);
+                                 sm2(234.0, 241., orgBeat, 4.0, 0.5);
     glitchColor = vec3(1.0);
 
 
@@ -931,6 +932,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
 
     p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
+
+    float ttt = (orgBeat - 240.0) * 2.0;
+    p.y *= mix(mix(mix(1.0, 3.0, saturate(exponentialIn(ttt))), 1.2, saturate(exponentialOut(ttt - 1.0))), 2000.0, saturate(exponentialIn(ttt - 2.0)));
+    p.x *= mix(mix(1.0, 3.0, saturate(exponentialOut(ttt - 1.0))), 0.5, saturate(exponentialOut(ttt - 2.0)));
+    if (p.y > 1.0 || p.y < -1.0 || p.x > iResolution.x / iResolution.y || p.x < -iResolution.x / iResolution.y) {
+        return;
+    }
     vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .5;
     vec3 col =  scene(pp) * glitchColor;
 
@@ -939,6 +947,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = mix(col, 1.0 - col, step(228.0, orgBeat) * step(orgBeat, 228.5));
     col = mix(col, 1.0 - col, step(231.0, orgBeat) * step(orgBeat, 231.5));
     col = mix(col, 1.0 - col, step(232.0, orgBeat) * step(orgBeat, 233.0));
+    col = mix(col, 1.0 - col, step(238.0, orgBeat) * step(orgBeat, 243.0));
 
     vec2 uv = fragCoord.xy / iResolution.xy;
     uv *=  1.0 - uv.yx;
