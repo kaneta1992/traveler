@@ -7,7 +7,7 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-//#define saturate(x) (clamp(x, 0.0, 1.0))
+#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
@@ -889,8 +889,15 @@ vec3 postProcess(vec2 uv, vec3 col)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
-    float t = iTime + 0.;
+    float t = iTime + 80.;
     orgBeat = t * BPM / 60.0;
+    
+    float b = orgBeat;
+    b = mix(b, 226.5 + mod(orgBeat * 2.0, 0.5), step(228.0, orgBeat) * step(orgBeat, 228.5));
+    b = mix(b, 229.0 + mod(orgBeat * 2.0, 0.5), step(231.0, orgBeat) * step(orgBeat, 231.5));
+    b = mix(b, 232.0 + mod(orgBeat * 2.0, 0.5), step(232.0, orgBeat) * step(orgBeat, 233.0));
+    t = b * 60.0 / BPM;
+    
     beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, orgBeat, 8.0)));
@@ -929,6 +936,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 col =  scene(pp) * glitchColor;
 
     col = postProcess(p, col);
+    
+    col = mix(col, 1.0 - col, step(228.0, orgBeat) * step(orgBeat, 228.5));
+    col = mix(col, 1.0 - col, step(231.0, orgBeat) * step(orgBeat, 231.5));
+    col = mix(col, 1.0 - col, step(232.0, orgBeat) * step(orgBeat, 233.0));
 
     vec2 uv = fragCoord.xy / iResolution.xy;
     uv *=  1.0 - uv.yx;
