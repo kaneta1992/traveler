@@ -403,6 +403,13 @@ vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float s
     return col;
 }
 
+vec3 rgb2hsv(vec3 hsv)
+{
+	vec4 t = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	vec3 p = abs(fract(vec3(hsv.x) + t.xyz) * 6.0 - vec3(t.w));
+	return hsv.z * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), hsv.y);
+}
+
 vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
 {
     vec3 pos = ro + ray * depth;
@@ -434,18 +441,11 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         float noShade = 0.0;
         noShade = step(distance(pos, sp), sceneBeat) * step(45.0, beat);
 
-        float wing_pattern = pow(saturate(pattern.x + pattern.y + pattern.z), 1.2) * 1.2;
-        col += ((cameraLightCol + stageLightCol * sha + light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), mix(25., 100., step(176.0, beat)))) * edgeOnly * noShade + max(wing_pattern, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
+        float wing_pattern = pow(saturate(pattern.x + pattern.y + pattern.z), 1.5) * 1.5;
+        col += ((cameraLightCol + stageLightCol * sha + light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), mix(25., 100., step(176.0, beat)))) * edgeOnly * noShade + max(wing_pattern, 0.0) * (mix(vec3(0.1,0.2,0.4), rgb2hsv(vec3(pos.z * 1.0, .95, 1.0)), step(160.0, beat))) * 4.0 * patternIntensity(pos)) * glowIntensity;
     }
 
     return mix(col, fogColor, pow(depth * 0.018, 2.1));
-}
-
-vec3 rgb2hsv(vec3 hsv)
-{
-	vec4 t = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-	vec3 p = abs(fract(vec3(hsv.x) + t.xyz) * 6.0 - vec3(t.w));
-	return hsv.z * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), hsv.y);
 }
 
 vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
