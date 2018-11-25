@@ -929,7 +929,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     orgBeat = t * BPM / 60.0;
     
     float b = orgBeat;
-    b = mix(b, 226.5 + mod(orgBeat * 2.0, 0.5), step(228.0, orgBeat) * step(orgBeat, 228.5));
+    b = mix(b, 226.0 + mod(orgBeat * 2.0, 0.5), step(228.0, orgBeat) * step(orgBeat, 228.5));
     b = mix(b, 229.0 + mod(orgBeat * 2.0, 0.5), step(231.0, orgBeat) * step(orgBeat, 231.5));
     b = mix(b, 227.0 + mod(orgBeat * 2.0, 0.5), step(232.0, orgBeat) * step(orgBeat, 232.5));
     b = mix(b, 237.0 + mod(orgBeat * 4.0, 1.0), step(238.0, orgBeat) * step(orgBeat, 244.0));
@@ -941,6 +941,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     glitchIntensity = step(44.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 44.0)) +
                                  step(144.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 144.0)) +
                                  step(176.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 176.0)) +
+                                 step(228.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 228.0)) +
+                                 step(231.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 231.0)) +
+                                 step(232.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 232.0)) +
                                  sm2(234.0, 242.75, orgBeat, 4.0, 0.5);
     glitchColor = vec3(1.0);
 
