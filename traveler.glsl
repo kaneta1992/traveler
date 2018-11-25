@@ -892,22 +892,66 @@ vec3 postProcess(vec2 uv, vec3 col)
     return col + f * stageFlareIntensity + s * travelerFlareIntensity;
 }
 
+float triPrism( vec3 p, vec2 h )
+{
+    vec3 q = abs(p);
+    return max(q.z-h.y,max(q.x*0.866025+p.y*0.5,-p.y)-h.x*0.5);
+}
+
+float Logo1(vec3 p)
+{
+    float d = 99999.9;
+    d = min(d, triPrism((p + vec3(2.75, -8.0, 0.0)) * vec3(0.76, 1.0, 1.0), vec2(11.45, 0.0)));
+    d = min(d, triPrism((p + vec3(-11.6, -13.8, 0.0)) * vec3(0.76, -1.0, 1.0), vec2(11.45, 0.0)));
+    d = min(d, triPrism((p + vec3(16.9, -13.8, 0.0)) * vec3(0.76, -1.0, 1.0), vec2(11.45, 0.0)));
+    return d;
+}
+
+
+float Logo2(vec3 p)
+{
+    float d = 99999.9;
+    d = min(d, triPrism((p + vec3(5.7, -10.05, 0.0)) * vec3(0.76, 1.0, 1.0), vec2(6.85, 0.0)));
+    d = min(d, triPrism((p + vec3(-17.0, -10.8, 0.0)) * vec3(0.76, -1.0, 1.0), vec2(8.45, 0.0)));
+    return d;
+}
+
+float gage(vec2 p)
+{
+    float d = 99999.9;
+    p.x += 2.0;
+    d = min(d, sdRect(p, vec2(25.0, 1.0)));
+
+    float t = clamp(time / 30.0 * 24.8, 0.0, 24.8);
+    p.x -= t;
+    d = max(d, -sdRect(p, vec2(24.8 - t, 0.8)));
+    return d;
+}
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
-    float t = time + 0.0;
+    float t = time + 100.;
     orgBeat = t * BPM / 60.0;
+    
+    float b = orgBeat;
+    b = mix(b, 226.5 + mod(orgBeat * 2.0, 0.5), step(228.0, orgBeat) * step(orgBeat, 228.5));
+    b = mix(b, 229.0 + mod(orgBeat * 2.0, 0.5), step(231.0, orgBeat) * step(orgBeat, 231.5));
+    b = mix(b, 227.0 + mod(orgBeat * 2.0, 0.5), step(232.0, orgBeat) * step(orgBeat, 232.5));
+    b = mix(b, 237.0 + mod(orgBeat * 4.0, 1.0), step(238.0, orgBeat) * step(orgBeat, 244.0));
+    t = b * 60.0 / BPM;
+    
     beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, orgBeat, 8.0)));
     glitchIntensity = step(44.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 44.0)) +
                                  step(144.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 144.0)) +
                                  step(176.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 176.0)) +
-                                 sm2(234.0, 240., orgBeat, 4.0, 0.5);
+                                 sm2(234.0, 242.75, orgBeat, 4.0, 0.5);
     glitchColor = vec3(1.0);
 
 
-    vec2 block = floor((p * 200.0) / vec2(16));
+    vec2 block = floor((p * vec2(100, 400.0)) / vec2(16));
     vec2 uv_noise = block / vec2(64);
     uv_noise += floor(vec2(t) * vec2(1234.0, 3543.0)) / vec2(64);
 
@@ -923,18 +967,29 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         intensity *= sm(-0.4 + switchTraveler, 0.4 + switchTraveler, p.y, 0.1);
         intensity = saturate(intensity + glitchIntensity);
         vec2 dist = (fract(uv_noise) - 0.5) * intensity;
-        fragCoord.x -= dist.x * 250.1 * intensity;
-        fragCoord.y -= dist.y * 250.2 * intensity;
+        fragCoord.x -= dist.x * 350.1 * intensity;
+        fragCoord.y -= dist.y * 350.2 * intensity;
         vec3 h = hash3(vec3(fract(uv_noise) - 0.5, 0.0)) * 2.0;
         glitchColor = mix(vec3(1.0), h, intensity);
-        //beat = orgBeat;
     }
 
     p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
+
+    float ttt = (orgBeat - 242.0) * 4.;
+    p.y *= mix(mix(mix(1.0, 5.0, saturate(exponentialIn(ttt))), 1.1, saturate(exponentialOut(ttt - 1.0))), 1000.0, saturate(exponentialIn(ttt - 2.0)));
+    p.x *= mix(mix(1.0, 5.0, saturate(exponentialOut(ttt - 1.0))), 0.5, saturate(exponentialOut(ttt - 2.0)));
+
+    vec2 size = resolution.xy / min(resolution.x, resolution.y);
     vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .5;
     vec3 col =  scene(pp) * glitchColor;
 
     col = postProcess(p, col);
+    col = saturate(col);
+    
+    col = mix(col, 1.0 - col, step(228.0, orgBeat) * step(orgBeat, 228.5));
+    col = mix(col, 1.0 - col, step(231.0, orgBeat) * step(orgBeat, 231.5));
+    col = mix(col, 1.0 - col, step(232.0, orgBeat) * step(orgBeat, 232.5));
+    col = mix(col, 1.0 - col, step(238.0, orgBeat) * step(orgBeat, 244.0));
 
     vec2 uv = fragCoord.xy / resolution.xy;
     uv *=  1.0 - uv.yx;
@@ -943,6 +998,20 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = saturate(pow(col, vec3(1.0 / 2.2))) * vig;
     col = mix(col, vec3(1.), saturate((beat - 251.0) / 4.0));
     col = mix(col, vec3(0.), saturate((beat - 256.0) / 2.0));
+
+    vec2 ppp = p;
+    p *= 12.5 * 1.33333333;
+    p+= vec2(-1.55, 9.5);
+
+    float logo1 = 1.0 - smoothstep(0.0, 0.1, Logo1(vec3(p, 0.0)));
+    float logo2 = 1.0 - smoothstep(0.0, 0.1, Logo2(vec3(p, 0.0)));
+    float g = 1.0 - smoothstep(0.0, 0.1, gage(p));
+
+    col = mix(col, vec3(0.23), logo1 * (1.0 - smoothstep(2.0, 3.3, t)));
+    col = mix(col, vec3(0.85, 0.35, 0.35), logo2 * (1.0 - smoothstep(2.0, 3.3, t)));
+    col = mix(col, vec3(0.8), g * (1.0 - smoothstep(1.0, 1.5, t)));
+
+    col = mix(col, vec3(0.), saturate(step(size.y, ppp.y) + step(ppp.y, -size.y) + step(size.x, ppp.x) + step(ppp.x, -size.x) + step(3.0, ttt)));
 
     fragColor = vec4(col, 1.0);
 }
