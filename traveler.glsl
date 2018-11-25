@@ -13,7 +13,7 @@ precision mediump float;
 
 #define saturate(x) (clamp(x, 0.0, 1.0))
 
-#define BPM (130.*1.)
+#define BPM (130.)
 
 uniform float time;
 uniform vec2 resolution;
@@ -410,6 +410,13 @@ vec3 shade(vec3 pos, vec3 normal, vec3 ray, vec3 diffuse, vec3 specular, float s
     return col;
 }
 
+vec3 rgb2hsv(vec3 hsv)
+{
+	vec4 t = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	vec3 p = abs(fract(vec3(hsv.x) + t.xyz) * 6.0 - vec3(t.w));
+	return hsv.z * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), hsv.y);
+}
+
 vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
 {
     vec3 pos = ro + ray * depth;
@@ -441,18 +448,11 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         float noShade = 0.0;
         noShade = step(distance(pos, sp), sceneBeat) * step(45.0, beat);
 
-        float wing_pattern = pow(saturate(pattern.x + pattern.y + pattern.z), 1.2) * 1.2;
-        col += ((cameraLightCol + stageLightCol * sha + light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), mix(25., 100., step(176.0, beat)))) * edgeOnly * noShade + max(wing_pattern, 0.0) * vec3(0.1,0.2,0.4) * 4.0 * patternIntensity(pos)) * glowIntensity;
+        float wing_pattern = pow(saturate(pattern.x + pattern.y + pattern.z), 1.5) * 1.5;
+        col += ((cameraLightCol + stageLightCol * sha + light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), mix(25., 100., step(176.0, beat)))) * edgeOnly * noShade + max(wing_pattern, 0.0) * (mix(vec3(0.1,0.2,0.4), rgb2hsv(vec3(pos.z * 1.0, .95, 1.0)), step(160.0, beat))) * 4.0 * patternIntensity(pos)) * glowIntensity;
     }
 
     return mix(col, fogColor, pow(depth * 0.018, 2.1));
-}
-
-vec3 rgb2hsv(vec3 hsv)
-{
-	vec4 t = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-	vec3 p = abs(fract(vec3(hsv.x) + t.xyz) * 6.0 - vec3(t.w));
-	return hsv.z * mix(vec3(t.x), clamp(p - vec3(t.x), 0.0, 1.0), hsv.y);
 }
 
 vec3 glowTrace(vec3 ro, vec3 ray, float maxDepth)
@@ -662,7 +662,7 @@ vec3 scene(vec2 p)
     float scene3_2CameraFov = 3.5;
     float scene3_3CameraFov = 3.5;
     float scene3_4CameraFov = 1.5;
-    float scene4CameraFov = 0.5;
+    float scene4CameraFov = 0.45;
 
     vec2 rnd = hash(vec2(beat * 0.5)) * 0.05;
     rnd *= saturate(max(0.0, 1.0 - distance(scene0CameraPos, sp) / 5.0) * (1.0 - cscene0to1) +
@@ -693,9 +693,9 @@ vec3 scene(vec2 p)
     ro = mix(ro, scene2CameraPos, cscene2to2_5);
 
     ro = mix(ro, scene3CameraPos, cscene2_1to2_2);
-    ro = mix(ro, scene4CameraPos + vec3(rnd, 0.0) - vec3(0., 0., toffset), cscene3to4);
+    ro = mix(ro, scene4CameraPos + vec3(rnd * 2.0, 0.0) - vec3(0., 0., toffset), cscene3to4);
 
-    ta = mix(scene0CameraTarget + vec3(rnd, 0.0), scene1CameraTarget, cscene0to1);
+    ta = mix(scene0CameraTarget + vec3(rnd * 2.0, 0.0), scene1CameraTarget, cscene0to1);
     ta = mix(ta, scene2CameraTarget, cscene1to2);
 
     // scene2 side camera
@@ -938,7 +938,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     b = mix(b, 226.0 + mod(orgBeat * 2.0, 0.5), step(228.0, orgBeat) * step(orgBeat, 228.5));
     b = mix(b, 229.0 + mod(orgBeat * 2.0, 0.5), step(231.0, orgBeat) * step(orgBeat, 231.5));
     b = mix(b, 227.0 + mod(orgBeat * 2.0, 0.5), step(232.0, orgBeat) * step(orgBeat, 232.5));
-    b = mix(b, 237.0 + mod(orgBeat * 4.0, 1.0), step(238.0, orgBeat) * step(orgBeat, 244.0));
+    b = mix(b, 238.3 + mod(orgBeat * 4.0, 1.0), step(238.0, orgBeat) * step(orgBeat, 244.0));
     t = b * 60.0 / BPM;
     
     beat = (t + hash(p).x * 0.0065 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
@@ -950,7 +950,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                                  step(228.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 228.0)) +
                                  step(231.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 231.0)) +
                                  step(232.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 232.0)) +
-                                 sm2(234.0, 242.75, orgBeat, 4.0, 0.5);
+                                 sm2(234.0, 242.65, orgBeat, 4.0, 0.5);
     glitchColor = vec3(1.0);
 
 
@@ -979,7 +979,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
 
     float ttt = (orgBeat - 242.0) * 4.;
-    p.y *= mix(mix(mix(1.0, 5.0, saturate(exponentialIn(ttt))), 1.1, saturate(exponentialOut(ttt - 1.0))), 1000.0, saturate(exponentialIn(ttt - 2.0)));
+    p.y *= mix(mix(mix(1.0, 5.0, saturate(exponentialIn(ttt))), 1.1, saturate(exponentialOut(ttt - 1.0))), 300.0, saturate(exponentialIn(ttt - 2.0)));
     p.x *= mix(mix(1.0, 5.0, saturate(exponentialOut(ttt - 1.0))), 0.5, saturate(exponentialOut(ttt - 2.0)));
 
     vec2 size = resolution.xy / min(resolution.x, resolution.y);
@@ -992,7 +992,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = mix(col, 1.0 - col, step(228.0, orgBeat) * step(orgBeat, 228.5));
     col = mix(col, 1.0 - col, step(231.0, orgBeat) * step(orgBeat, 231.5));
     col = mix(col, 1.0 - col, step(232.0, orgBeat) * step(orgBeat, 232.5));
-    col = mix(col, 1.0 - col, step(238.0, orgBeat) * step(orgBeat, 244.0));
+    col = mix(col, 1.0 - col, step(242.0, orgBeat) * step(orgBeat, 244.0));
 
     vec2 uv = fragCoord.xy / resolution.xy;
     uv *=  1.0 - uv.yx;
@@ -1014,7 +1014,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = mix(col, vec3(0.85, 0.35, 0.35), logo2 * (1.0 - smoothstep(2.0, 3.3, t)));
     col = mix(col, vec3(0.8), g * (1.0 - smoothstep(1.0, 1.5, t)));
 
-    col = mix(col, vec3(0.), saturate(step(size.y, ppp.y) + step(ppp.y, -size.y) + step(size.x, ppp.x) + step(ppp.x, -size.x) + step(3.0, ttt)));
+    col = mix(col, vec3(0.), saturate(step(size.y, ppp.y) + step(ppp.y, -size.y) + step(size.x, ppp.x) + step(ppp.x, -size.x) + step(3.3, ttt)));
 
     fragColor = vec4(col, 1.0);
 }
