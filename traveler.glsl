@@ -687,9 +687,9 @@ vec3 scene(vec2 p)
     ro = mix(ro, scene2CameraPos, cscene2to2_5);
 
     ro = mix(ro, scene3CameraPos, cscene2_1to2_2);
-    ro = mix(ro, scene4CameraPos + vec3(rnd, 0.0) - vec3(0., 0., toffset), cscene3to4);
+    ro = mix(ro, scene4CameraPos + vec3(rnd * 2.0, 0.0) - vec3(0., 0., toffset), cscene3to4);
 
-    ta = mix(scene0CameraTarget + vec3(rnd, 0.0), scene1CameraTarget, cscene0to1);
+    ta = mix(scene0CameraTarget + vec3(rnd * 2.0, 0.0), scene1CameraTarget, cscene0to1);
     ta = mix(ta, scene2CameraTarget, cscene1to2);
 
     // scene2 side camera
@@ -932,7 +932,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     b = mix(b, 226.0 + mod(orgBeat * 2.0, 0.5), step(228.0, orgBeat) * step(orgBeat, 228.5));
     b = mix(b, 229.0 + mod(orgBeat * 2.0, 0.5), step(231.0, orgBeat) * step(orgBeat, 231.5));
     b = mix(b, 227.0 + mod(orgBeat * 2.0, 0.5), step(232.0, orgBeat) * step(orgBeat, 232.5));
-    b = mix(b, 237.0 + mod(orgBeat * 4.0, 1.0), step(238.0, orgBeat) * step(orgBeat, 244.0));
+    b = mix(b, 238.3 + mod(orgBeat * 4.0, 1.0), step(238.0, orgBeat) * step(orgBeat, 244.0));
     t = b * 60.0 / BPM;
     
     beat = (t + hash(p).x * 0.0065 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
@@ -944,7 +944,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                                  step(228.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 228.0)) +
                                  step(231.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 231.0)) +
                                  step(232.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 232.0)) +
-                                 sm2(234.0, 242.75, orgBeat, 4.0, 0.5);
+                                 sm2(234.0, 242.65, orgBeat, 4.0, 0.5);
     glitchColor = vec3(1.0);
 
 
@@ -986,7 +986,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = mix(col, 1.0 - col, step(228.0, orgBeat) * step(orgBeat, 228.5));
     col = mix(col, 1.0 - col, step(231.0, orgBeat) * step(orgBeat, 231.5));
     col = mix(col, 1.0 - col, step(232.0, orgBeat) * step(orgBeat, 232.5));
-    col = mix(col, 1.0 - col, step(238.0, orgBeat) * step(orgBeat, 244.0));
+    col = mix(col, 1.0 - col, step(242.0, orgBeat) * step(orgBeat, 244.0));
 
     vec2 uv = fragCoord.xy / iResolution.xy;
     uv *=  1.0 - uv.yx;
