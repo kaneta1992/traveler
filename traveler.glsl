@@ -656,7 +656,7 @@ vec3 scene(vec2 p)
     float scene3_2CameraFov = 3.5;
     float scene3_3CameraFov = 3.5;
     float scene3_4CameraFov = 1.5;
-    float scene4CameraFov = 0.5;
+    float scene4CameraFov = 0.45;
 
     vec2 rnd = hash(vec2(beat * 0.5)) * 0.05;
     rnd *= saturate(max(0.0, 1.0 - distance(scene0CameraPos, sp) / 5.0) * (1.0 - cscene0to1) +
