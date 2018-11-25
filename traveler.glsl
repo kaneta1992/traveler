@@ -7,7 +7,7 @@
 #define MAT_BODY  2.0
 #define MAT_STAGE 3.0
 
-//#define saturate(x) (clamp(x, 0.0, 1.0))
+#define saturate(x) (clamp(x, 0.0, 1.0))
 
 #define BPM (130.*1.)
 
@@ -428,7 +428,7 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
 
         vec3 cameraLightCol = light(pos, nor, ray, cameraLight * 2.0, ro, vec3(1.), vec3(1.), 25.);
         vec3 stageLightCol = light(pos, nor, ray, stageLight, ro + vec3(0.0, 0.0, 2.0), vec3(1.), vec3(1.), 25.);
-        float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + 0.2);
+        float sha = (softshadow(pos, lvec, 0.01, length(lpos - pos), 4.0) + mix(.2, .4, step(160.0, beat)));
 
         // ステージが出現する演出
         float noShade = 0.0;
@@ -656,7 +656,7 @@ vec3 scene(vec2 p)
     float scene3_2CameraFov = 3.5;
     float scene3_3CameraFov = 3.5;
     float scene3_4CameraFov = 1.5;
-    float scene4CameraFov = 0.65;
+    float scene4CameraFov = 0.5;
 
     vec2 rnd = hash(vec2(beat * 0.5)) * 0.05;
     rnd *= saturate(max(0.0, 1.0 - distance(scene0CameraPos, sp) / 5.0) * (1.0 - cscene0to1) +
@@ -929,18 +929,21 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     orgBeat = t * BPM / 60.0;
     
     float b = orgBeat;
-    b = mix(b, 226.5 + mod(orgBeat * 2.0, 0.5), step(228.0, orgBeat) * step(orgBeat, 228.5));
+    b = mix(b, 226.0 + mod(orgBeat * 2.0, 0.5), step(228.0, orgBeat) * step(orgBeat, 228.5));
     b = mix(b, 229.0 + mod(orgBeat * 2.0, 0.5), step(231.0, orgBeat) * step(orgBeat, 231.5));
     b = mix(b, 227.0 + mod(orgBeat * 2.0, 0.5), step(232.0, orgBeat) * step(orgBeat, 232.5));
     b = mix(b, 237.0 + mod(orgBeat * 4.0, 1.0), step(238.0, orgBeat) * step(orgBeat, 244.0));
     t = b * 60.0 / BPM;
     
-    beat = (t + hash(p).x * 0.01 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
+    beat = (t + hash(p).x * 0.0065 * (1.0 - saturate((orgBeat - 230.0) / 4.0)) * step(12., orgBeat)) * BPM / 60.0;
 
     switchTraveler = mix(2.0, -2.0, saturate(sm(126.0, 172.0, orgBeat, 8.0)));
     glitchIntensity = step(44.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 44.0)) +
                                  step(144.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 144.0)) +
                                  step(176.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 176.0)) +
+                                 step(228.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 228.0)) +
+                                 step(231.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 231.0)) +
+                                 step(232.0, orgBeat) * exp(-3.0 * max(0.0, orgBeat - 232.0)) +
                                  sm2(234.0, 242.75, orgBeat, 4.0, 0.5);
     glitchColor = vec3(1.0);
 
