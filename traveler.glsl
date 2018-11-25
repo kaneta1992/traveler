@@ -931,7 +931,7 @@ float gage(vec2 p)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (fragCoord.xy * 2.0 - resolution.xy) / min(resolution.x, resolution.y);
-    float t = time + 100.;
+    float t = time - 30.;
     orgBeat = t * BPM / 60.0;
     
     float b = orgBeat;
