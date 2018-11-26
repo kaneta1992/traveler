@@ -131,9 +131,9 @@ float de(vec3 p, mat3 rot, float scale) {
         float b = mix(beat - 44., beat - 192.0, step(176.0, beat));
         b = mix(b, 0.0, step(beat, 44.0));
         b = mix(b, mod(beat, 8.0) + 64.0, step(108.0, beat) * step(beat, 176.0));
-        if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(b, freq * 0.25, 1.0));}
-        if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(b, freq * 0.75, 1.0));}
-        if (p.y < p.z) {p.yz = mix(p.zy, p.yz, saturate(pingPong(mod(b, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(b, freq*0.75))));}
+        p.yx = mix(p.yx, p.xy, (1.0 - pingPong(b, freq * 0.25, 1.0)) * step(p.x, p.y));
+        p.xz = mix(p.xz, p.zx, (1.0 - pingPong(b, freq * 0.75, 1.0)) * step(p.x, p.z));
+        p.yz = mix(p.yz, p.zy, (1.0 - saturate(pingPong(mod(b, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(b, freq*0.75)))) * step(p.y, p.z));
 
         p.z -= 0.5*offset.z*(scale-1.)/scale;
         p.z = -abs(-p.z);
