@@ -1,7 +1,7 @@
 #define TAU 6.283185307
 #define PI 3.141592654
 #define HALF_PI 1.5707963267948966
-#define U(z,w) (z.x < w.x ? z : w)
+#define U(z,w) (mix(z,w,step(w.x,z.x)))
 
 #define MAT_WING  1.0
 #define MAT_BODY  2.0
