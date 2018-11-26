@@ -978,7 +978,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p.x *= mix(mix(1.0, 5.0, saturate(exponentialOut(ttt - 1.0))), 0.5, saturate(exponentialOut(ttt - 2.0)));
 
     vec2 size = iResolution.xy / min(iResolution.x, iResolution.y);
-    vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .5;
+    vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .65;
     vec3 col =  scene(pp) * glitchColor;
 
     col = postProcess(p, col);
