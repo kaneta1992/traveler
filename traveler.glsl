@@ -917,7 +917,7 @@ float gage(vec2 p)
     p.y += 0.1;
     d = min(d, sdRect(p, vec2(14.0, 1.0)));
 
-    float t = clamp(iTime / 30.0 * 13.8, 0.0, 24.8);
+    float t = clamp(iTime / 30.0 * 13.8, 0.0, 13.8);
     p.x -= t;
     d = max(d, -sdRect(p, vec2(13.8 - t, 0.8)));
     return d;
