@@ -5,7 +5,7 @@ precision mediump float;
 #define TAU 6.283185307
 #define PI 3.141592654
 #define HALF_PI 1.5707963267948966
-#define U(z,w) (z.x < w.x ? z : w)
+#define U(z,w) (mix(z,w,step(w.x,z.x)))
 
 #define MAT_WING  1.0
 #define MAT_BODY  2.0
@@ -101,9 +101,9 @@ float patternIntensity(vec3 p)
     if (t < 0.0) {
         return 0.0;
     }
-    t -= 2.0;
+    t -= 2.5;
     float len = distance(sp, p);
-    return sm(0.0, 2., mod(len - t * 1.5, 6.0), .5);
+    return sm(0.0, 2.5, mod(len - t * 1.5, 6.0), .5);
 }
 
 float sphere( vec3 p, float s )
@@ -138,9 +138,9 @@ float de(vec3 p, mat3 rot, float scale) {
         float b = mix(beat - 44., beat - 192.0, step(176.0, beat));
         b = mix(b, 0.0, step(beat, 44.0));
         b = mix(b, mod(beat, 8.0) + 64.0, step(108.0, beat) * step(beat, 176.0));
-        if (p.x < p.y) {p.yx = mix(p.xy, p.yx, pingPong(b, freq * 0.25, 1.0));}
-        if (p.x < p.z) {p.xz = mix(p.zx, p.xz, pingPong(b, freq * 0.75, 1.0));}
-        if (p.y < p.z) {p.yz = mix(p.zy, p.yz, saturate(pingPong(mod(b, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(b, freq*0.75))));}
+        p.yx = mix(p.yx, p.xy, (1.0 - pingPong(b, freq * 0.25, 1.0)) * step(p.x, p.y));
+        p.xz = mix(p.xz, p.zx, (1.0 - pingPong(b, freq * 0.75, 1.0)) * step(p.x, p.z));
+        p.yz = mix(p.yz, p.zy, (1.0 - saturate(pingPong(mod(b, freq * 0.75), freq * 0.25, 1.0) - step(freq * 0.75 - 1.0, mod(b, freq*0.75)))) * step(p.y, p.z));
 
         p.z -= 0.5*offset.z*(scale-1.)/scale;
         p.z = -abs(-p.z);
@@ -177,7 +177,7 @@ vec2 distStage(vec3 p, mat3 rot, float scale)
     p.xy = foldRotate(p.xy - 0.75, stageFold) + 0.75;
     p = mod(p, 1.5) - 0.75;
     float d = de(p, rot, scale);
-    d = mix(d, .5, step(144.0, beat) * step(beat, 176.0));
+    d = mix(d, 100., step(144.0, beat) * step(beat, 176.0));
     return vec2(d, MAT_STAGE);
 }
 
@@ -448,8 +448,8 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         float noShade = 0.0;
         noShade = step(distance(pos, sp), sceneBeat) * step(45.0, beat);
 
-        float wing_pattern = pow(saturate(pattern.x + pattern.y + pattern.z), 1.5) * 1.5;
-        col += ((cameraLightCol + stageLightCol * sha + light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), mix(25., 100., step(176.0, beat)))) * edgeOnly * noShade + max(wing_pattern, 0.0) * (mix(vec3(0.1,0.2,0.4), rgb2hsv(vec3(pos.z * 1.0, .95, 1.0)), step(160.0, beat))) * 4.0 * patternIntensity(pos)) * glowIntensity;
+        float wing_pattern = pow(saturate(pattern.x + pattern.y + pattern.z), 1.5) * 1.2;
+        col += ((cameraLightCol + stageLightCol * sha + light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), mix(25., 100., step(176.0, beat)))) * edgeOnly * noShade + max(wing_pattern, 0.0) * (mix(vec3(0.1,0.2,0.4), rgb2hsv(vec3(pos.z * 1.0 + beat * 0.1, .85, 1.5)), step(160.0, beat))) * 4.0 * patternIntensity(pos)) * glowIntensity;
     }
 
     return mix(col, fogColor, pow(depth * 0.018, 2.1));
@@ -665,7 +665,7 @@ vec3 scene(vec2 p)
     float scene4CameraFov = 0.45;
 
     vec2 rnd = hash(vec2(beat * 0.5)) * 0.05;
-    rnd *= saturate(max(0.0, 1.0 - distance(scene0CameraPos, sp) / 5.0) * (1.0 - cscene0to1) +
+    rnd *= saturate(max(0.0, 1.0 - distance(scene0CameraPos, sp) / 3.0) * (1.0 - cscene0to1) +
                      saturate((beat - 234.0) / 6.0) * (1.0 - saturate(beat - 240.0)));
 
     ro = mix(scene0CameraPos + vec3(rnd, 0.0), scene1CameraPos, cscene0to1);
@@ -919,12 +919,13 @@ float Logo2(vec3 p)
 float gage(vec2 p)
 {
     float d = 99999.9;
-    p.x += 2.0;
-    d = min(d, sdRect(p, vec2(25.0, 1.0)));
+    p.x += 2.8;
+    p.y += 0.1;
+    d = min(d, sdRect(p, vec2(14.0, 1.0)));
 
-    float t = clamp(time / 30.0 * 24.8, 0.0, 24.8);
+    float t = clamp(time / 30.0 * 13.8, 0.0, 13.8);
     p.x -= t;
-    d = max(d, -sdRect(p, vec2(24.8 - t, 0.8)));
+    d = max(d, -sdRect(p, vec2(13.8 - t, 0.8)));
     return d;
 }
 
@@ -983,7 +984,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p.x *= mix(mix(1.0, 5.0, saturate(exponentialOut(ttt - 1.0))), 0.5, saturate(exponentialOut(ttt - 2.0)));
 
     vec2 size = resolution.xy / min(resolution.x, resolution.y);
-    vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .5;
+    vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .65;
     vec3 col =  scene(pp) * glitchColor;
 
     col = postProcess(p, col);
@@ -1010,9 +1011,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float logo2 = 1.0 - smoothstep(0.0, 0.1, Logo2(vec3(p, 0.0)));
     float g = 1.0 - smoothstep(0.0, 0.1, gage(p));
 
+    col = mix(col, vec3(1.0), 1.0 - smoothstep(1.0, 1.5, t));
     col = mix(col, vec3(0.23), logo1 * (1.0 - smoothstep(2.0, 3.3, t)));
     col = mix(col, vec3(0.85, 0.35, 0.35), logo2 * (1.0 - smoothstep(2.0, 3.3, t)));
-    col = mix(col, vec3(0.8), g * (1.0 - smoothstep(1.0, 1.5, t)));
+    col = mix(col, vec3(0.85, 0.35, 0.35), g * (1.0 - smoothstep(1.0, 1.5, t)));
 
     col = mix(col, vec3(0.), saturate(step(size.y, ppp.y) + step(ppp.y, -size.y) + step(size.x, ppp.x) + step(ppp.x, -size.x) + step(3.3, ttt)));
 
