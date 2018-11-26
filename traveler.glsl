@@ -94,9 +94,9 @@ float patternIntensity(vec3 p)
     if (t < 0.0) {
         return 0.0;
     }
-    t -= 2.0;
+    t -= 2.5;
     float len = distance(sp, p);
-    return sm(0.0, 2., mod(len - t * 1.5, 6.0), .5);
+    return sm(0.0, 2.5, mod(len - t * 1.5, 6.0), .5);
 }
 
 float sphere( vec3 p, float s )
@@ -441,8 +441,8 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         float noShade = 0.0;
         noShade = step(distance(pos, sp), sceneBeat) * step(45.0, beat);
 
-        float wing_pattern = pow(saturate(pattern.x + pattern.y + pattern.z), 1.5) * 1.5;
-        col += ((cameraLightCol + stageLightCol * sha + light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), mix(25., 100., step(176.0, beat)))) * edgeOnly * noShade + max(wing_pattern, 0.0) * (mix(vec3(0.1,0.2,0.4), rgb2hsv(vec3(pos.z * 1.0, .95, 1.0)), step(160.0, beat))) * 4.0 * patternIntensity(pos)) * glowIntensity;
+        float wing_pattern = pow(saturate(pattern.x + pattern.y + pattern.z), 1.5) * 1.2;
+        col += ((cameraLightCol + stageLightCol * sha + light(pos, nor, ray, travelerLight, sp, vec3(1.), vec3(1.), mix(25., 100., step(176.0, beat)))) * edgeOnly * noShade + max(wing_pattern, 0.0) * (mix(vec3(0.1,0.2,0.4), rgb2hsv(vec3(pos.z * 1.0 + beat * 0.1, .85, 1.5)), step(160.0, beat))) * 4.0 * patternIntensity(pos)) * glowIntensity;
     }
 
     return mix(col, fogColor, pow(depth * 0.018, 2.1));
