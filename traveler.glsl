@@ -170,7 +170,7 @@ vec2 distStage(vec3 p, mat3 rot, float scale)
     p.xy = foldRotate(p.xy - 0.75, stageFold) + 0.75;
     p = mod(p, 1.5) - 0.75;
     float d = de(p, rot, scale);
-    d = mix(d, .5, step(144.0, beat) * step(beat, 176.0));
+    d = mix(d, 100., step(144.0, beat) * step(beat, 176.0));
     return vec2(d, MAT_STAGE);
 }
 
