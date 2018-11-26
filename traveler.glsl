@@ -913,12 +913,13 @@ float Logo2(vec3 p)
 float gage(vec2 p)
 {
     float d = 99999.9;
-    p.x += 2.0;
-    d = min(d, sdRect(p, vec2(25.0, 1.0)));
+    p.x += 2.8;
+    p.y += 0.1;
+    d = min(d, sdRect(p, vec2(14.0, 1.0)));
 
-    float t = clamp(iTime / 30.0 * 24.8, 0.0, 24.8);
+    float t = clamp(iTime / 30.0 * 13.8, 0.0, 24.8);
     p.x -= t;
-    d = max(d, -sdRect(p, vec2(24.8 - t, 0.8)));
+    d = max(d, -sdRect(p, vec2(13.8 - t, 0.8)));
     return d;
 }
 
@@ -1004,9 +1005,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float logo2 = 1.0 - smoothstep(0.0, 0.1, Logo2(vec3(p, 0.0)));
     float g = 1.0 - smoothstep(0.0, 0.1, gage(p));
 
+    col = mix(col, vec3(1.0), 1.0 - smoothstep(1.0, 1.5, t));
     col = mix(col, vec3(0.23), logo1 * (1.0 - smoothstep(2.0, 3.3, t)));
     col = mix(col, vec3(0.85, 0.35, 0.35), logo2 * (1.0 - smoothstep(2.0, 3.3, t)));
-    col = mix(col, vec3(0.8), g * (1.0 - smoothstep(1.0, 1.5, t)));
+    col = mix(col, vec3(0.85, 0.35, 0.35), g * (1.0 - smoothstep(1.0, 1.5, t)));
 
     col = mix(col, vec3(0.), saturate(step(size.y, ppp.y) + step(ppp.y, -size.y) + step(size.x, ppp.x) + step(ppp.x, -size.x) + step(3.3, ttt)));
 
