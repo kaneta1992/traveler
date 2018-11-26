@@ -659,7 +659,7 @@ vec3 scene(vec2 p)
     float scene4CameraFov = 0.45;
 
     vec2 rnd = hash(vec2(beat * 0.5)) * 0.05;
-    rnd *= saturate(max(0.0, 1.0 - distance(scene0CameraPos, sp) / 5.0) * (1.0 - cscene0to1) +
+    rnd *= saturate(max(0.0, 1.0 - distance(scene0CameraPos, sp) / 3.0) * (1.0 - cscene0to1) +
                      saturate((beat - 234.0) / 6.0) * (1.0 - saturate(beat - 240.0)));
 
     ro = mix(scene0CameraPos + vec3(rnd, 0.0), scene1CameraPos, cscene0to1);
