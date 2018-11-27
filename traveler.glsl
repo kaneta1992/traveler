@@ -974,8 +974,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
 
     float ttt = (orgBeat - 242.0) * 4.;
-    p.y *= mix(mix(mix(1.0, 5.0, saturate(exponentialIn(ttt))), 1.1, saturate(exponentialOut(ttt - 1.0))), 300.0, saturate(exponentialIn(ttt - 2.0)));
-    p.x *= mix(mix(1.0, 5.0, saturate(exponentialOut(ttt - 1.0))), 0.5, saturate(exponentialOut(ttt - 2.0)));
+    float val = min(150.0, mix(mix(mix(1.0, 5.0, saturate(exponentialIn(ttt))), 1.1, saturate(exponentialOut(ttt - 1.0))), 2000.0, saturate(exponentialIn(ttt - 2.0))));
+    val = mix(val, 2000.0, saturate(ttt - 3.00));
+    p.y *= val;
+    p.x *= mix(mix(1.0, 3.0, saturate(exponentialOut(ttt - 1.0))), 0.1, saturate(exponentialOut(ttt - 2.0)));
 
     vec2 size = iResolution.xy / min(iResolution.x, iResolution.y);
     vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .65;
@@ -1010,6 +1012,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = mix(col, vec3(0.85, 0.35, 0.35), logo2 * (1.0 - smoothstep(2.0, 3.3, t)));
     col = mix(col, vec3(0.85, 0.35, 0.35), g * (1.0 - smoothstep(1.0, 1.5, t)));
 
+    col = mix(col, vec3(1.), smoothstep(1.9, 2.0, ttt));
     col = mix(col, vec3(0.), saturate(step(size.y, ppp.y) + step(ppp.y, -size.y) + step(size.x, ppp.x) + step(ppp.x, -size.x) + step(3.3, ttt)));
 
     fragColor = vec4(col, 1.0);
