@@ -426,9 +426,9 @@ vec3 materialize(vec3 ro, vec3 ray, float depth, vec2 mat)
         vec3 stageLightCol = light(pos, nor, ray, stageLight, ro + vec3(0.0, 0.0, 2.0), vec3(.1), vec3(.1), mix(5.0, 100.0, wing_pattern));
         col += cameraLightCol + stageLightCol;
 
-        col += vec3(1.0, 0.25, 0.35) * 1.25 * wing_pattern * (cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
+        col += vec3(1.0, 0.25, 0.35) * 1.3 * wing_pattern * (cos(beat * 0.5) * 0.5 + 1.0);
     } else if (mat.y == MAT_BODY) {
-        col += vec3(1.0, 0.25, 0.35) * 1. * saturate(cos(beat * 0.5) * 0.5 + 0.5 + 0.5);
+        col += vec3(1.0, 0.25, 0.35) * 1. * saturate(cos(beat * 0.5) * 0.5 + 1.0);
     } else if (mat.y == MAT_STAGE) {
         vec3 lpos = ro + vec3(0.0, 0.0, 2.0);
         vec3 lvec = normalize(lpos - pos);
@@ -745,13 +745,13 @@ vec3 scene(vec2 p)
 
     ////// Flare //////
     float scene0StageFlareIntensity = 0.0;
-    float scene2StageFlareIntensity = 0.5;
+    float scene2StageFlareIntensity = 0.6;
     float scene3StageFlareIntensity = 0.0;
-    float scene4StageFlareIntensity = 0.35;
+    float scene4StageFlareIntensity = 0.5;
 
     float scene0StageFlareExp = 1.0;
-    float scene2StageFlareExp = 8.0;
-    float scene4StageFlareExp = 2.5;
+    float scene2StageFlareExp = 7.0;
+    float scene4StageFlareExp = 2.0;
 
     float scene0TravelerFlareIntensity = max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5);
     float scene1TravelerFlareIntensity = max(0.2, cos(beat * 0.5) * 0.5 + 0.5);
