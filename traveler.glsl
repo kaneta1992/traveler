@@ -751,12 +751,12 @@ vec3 scene(vec2 p)
 
     ////// Flare //////
     float scene0StageFlareIntensity = 0.0;
-    float scene2StageFlareIntensity = 0.6;
+    float scene2StageFlareIntensity = 0.5;
     float scene3StageFlareIntensity = 0.0;
-    float scene4StageFlareIntensity = 0.5;
+    float scene4StageFlareIntensity = 0.45;
 
     float scene0StageFlareExp = 1.0;
-    float scene2StageFlareExp = 7.0;
+    float scene2StageFlareExp = 7.5;
     float scene4StageFlareExp = 2.0;
 
     float scene0TravelerFlareIntensity = max(0.2, cos(sceneBeat * 0.5) * 0.5 + 0.5);
