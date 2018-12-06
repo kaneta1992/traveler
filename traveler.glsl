@@ -126,7 +126,6 @@ float de(vec3 p, mat3 rot, float scale) {
         }
         p = abs(p);
 
-        // TODO: シーン4のタイミングとbeatが合わない場合はオフセット用意しよう
         // 全->横->全->縦->前->縦->ループ
         float b = mix(beat - 44., beat - 192.0, step(176.0, beat));
         b = mix(b, 0.0, step(beat, 44.0));
@@ -845,6 +844,7 @@ vec3 scene(vec2 p)
     return c.rgb;
 }
 
+// https://www.shadertoy.com/view/MdfBRX
 float Bokeh(vec2 p, vec2 sp, float size, float mi, float blur)
 {
     float d = length(p - sp);
@@ -948,6 +948,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                                  sm2(234.0, 242.65, orgBeat, 4.0, 0.5);
     glitchColor = vec3(1.0);
 
+    //// Glitch ////
 
     vec2 block = floor((p * vec2(100, 400.0)) / vec2(16));
     vec2 uv_noise = block / vec2(64);
@@ -970,14 +971,17 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec3 h = hash3(vec3(fract(uv_noise) - 0.5, 0.0)) * 2.0;
         glitchColor = mix(vec3(1.0), h, intensity);
     }
+    ////////////////
 
     p = (fragCoord.xy * 2.0 - iResolution.xy) / min(iResolution.x, iResolution.y);
 
+    //// shutdown effect ////
     float ttt = (orgBeat - 242.0) * 4.;
     float val = min(150.0, mix(mix(mix(1.0, 5.0, saturate(exponentialIn(ttt))), 1.1, saturate(exponentialOut(ttt - 1.0))), 2000.0, saturate(exponentialIn(ttt - 2.0))));
     val = mix(val, 2000.0, saturate(ttt - 3.00));
     p.y *= val;
     p.x *= mix(mix(1.0, 3.0, saturate(exponentialOut(ttt - 1.0))), 0.1, saturate(exponentialOut(ttt - 2.0)));
+    ////////////////////////
 
     vec2 size = iResolution.xy / min(iResolution.x, iResolution.y);
     vec2 pp = p + (vec2(fbm(vec2(beat * 0.1), 1.0), fbm(vec2(beat * 0.1 + 114.514), 1.0)) * 2.0 - 1.0) * .65;
@@ -986,19 +990,25 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = postProcess(p, col);
     col = saturate(col);
     
+    //// Nega-Posi ////
     col = mix(col, 1.0 - col, step(228.0, orgBeat) * step(orgBeat, 228.5));
     col = mix(col, 1.0 - col, step(231.0, orgBeat) * step(orgBeat, 231.5));
     col = mix(col, 1.0 - col, step(232.0, orgBeat) * step(orgBeat, 232.5));
     col = mix(col, 1.0 - col, step(242.0, orgBeat) * step(orgBeat, 244.0));
+    ///////////////////
 
+    //// vignet ////
     vec2 uv = fragCoord.xy / iResolution.xy;
     uv *=  1.0 - uv.yx;
     float vig = uv.x*uv.y * 200.0;
     vig = pow(vig, 0.1);
     col = saturate(pow(col, vec3(1.0 / 2.2))) * vig;
+    ///////////////
+
     col = mix(col, vec3(1.), saturate((beat - 251.0) / 4.0));
     col = mix(col, vec3(0.), saturate((beat - 256.0) / 2.0));
 
+    //// loading screen ////
     vec2 ppp = p;
     p *= 12.5 * 1.33333333;
     p+= vec2(-1.55, 9.5);
@@ -1011,6 +1021,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col = mix(col, vec3(0.23), logo1 * (1.0 - smoothstep(2.0, 3.3, t)));
     col = mix(col, vec3(0.85, 0.35, 0.35), logo2 * (1.0 - smoothstep(2.0, 3.3, t)));
     col = mix(col, vec3(0.85, 0.35, 0.35), g * (1.0 - smoothstep(1.0, 1.5, t)));
+    ///////////////////////
 
     col = mix(col, vec3(1.), smoothstep(1.9, 2.0, ttt));
     col = mix(col, vec3(0.), saturate(step(size.y, ppp.y) + step(ppp.y, -size.y) + step(size.x, ppp.x) + step(ppp.x, -size.x) + step(3.3, ttt)));
